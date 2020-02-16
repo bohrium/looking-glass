@@ -18,29 +18,30 @@ import numpy as np
 class Block:
     '''
         Blocks are subject to a randomly sampled set of constraints:
-                Reflection Symmetries [A]:
-                    1/2  chance enforce vertical axis 
-                    1/4  chance enforce horizontal axis 
-                    1/16 chance enforce slash axis 
-                    1/16 chance enforce backslash axis 
-                Geometry: 
-                    1/8  chance contains central pixel(s)
-                    1/8  chance contains border
-                    1/8  chance ms-paint convex
-                    1/16 chance is a product of sets
-                Topology:
-                    1/2  chance enforce king connectedness
-                    1/4  chance enforce ferz connectedness [B]
-                    1/4  chance enforce simple connectedness [C]
-                    1/8  chance enforce non-(simple connectedness) [D]
 
-        [A] These reflections together generate rotations, too. 
-            But not every D4 subgroup arises.
-        [B] That is, connected by size-1 *orthogonal* steps
-        [C] An empty cell surrounded only orthogonally counts as a hole
-        [D] Actually, since conflicting constraints such as simple connecteness
-            or convexity may overrule the non-(simple connectedness)
-            constraint, the chance 1/8 of sampling is not implemented exactly. 
+            Reflection Symmetries [A]:
+                1/4  chance enforce vertical axis 
+                1/4  chance enforce horizontal axis 
+                1/16 chance enforce slash axis 
+                1/16 chance enforce backslash axis 
+            Geometry: 
+                1/8  chance contains border
+                1/8  chance ms-paint convex
+                1/8  chance not (ms-paint convex) [B]
+                1/16 chance is a product of sets
+            Topology:
+                3/4  chance enforce king connectedness
+                1/4  chance enforce ferz connectedness [C]
+                1/4  chance enforce simple connectedness [D]
+                1/8  chance enforce non-(simple connectedness) [B, D]
+
+        [A] These reflections together generate rotations, too.  But not every
+            D4 subgroup arises.
+        [B] Since we allow conflicting constraints such as convexity to
+            overrule these constraints, the sampling probability 1/8 is not
+            implemented exactly. 
+        [C] Ferzs are pieces that move in size-1 *orthogonal* steps.
+        [D] An empty cell surrounded only orthogonally counts as a hole.
     '''
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -56,37 +57,48 @@ class Block:
         #-------------  0.0.1 sample constraint set  -------------------------#
 
         self.constraints = {
-            'sym-axes': {
-                'verti': bernoulli(1.0/2),
+            'sym': {
+                'verti': bernoulli(1.0/4),
                 'horiz': bernoulli(1.0/4),
                 'slash': bernoulli(1.0/16),
                 'blash': bernoulli(1.0/16),
             },
-            'geometry': {
+            'geo': {
                 'brdrd': bernoulli(1.0/8),
-                'cntrd': bernoulli(1.0/8),
                 'cnvex': bernoulli(1.0/8),
+                'ncnvx': bernoulli(2.0/8), # 2.0 counters overruling by others
                 'prdct': bernoulli(1.0/16),
             },
-            'topology': {
-                'kconn': bernoulli(1.0/2),
+            'top': {
+                'kconn': bernoulli(3.0/4),
                 'fconn': bernoulli(1.0/4),
                 'simpl': bernoulli(1.0/8),
-                'nsimp': bernoulli(2.0/8), # 2.0 counters overruling by others
+                'nsmpl': bernoulli(2.0/8), # 2.0 counters overruling by others
             },
         }
 
         #-------------  0.0.2 prevent constraint conflicts  ------------------#
 
+        if (self.side<=2 or 
+            self.side<=3 and self.constraints['top']['nsmpl'] or
+            self.constraints['geo']['cnvex'] or 
+            sum(int(self.constraints[con][nm])*w for con, nm, w in
+                (('geo', 'brdrd', 1.0),
+                 ('geo', 'prdct', 1.6),
+                 ('top', 'kconn', 0.4),
+                 ('top', 'fconn', 0.4),
+                 ('top', 'simpl', 1.0),)) >= 2.0
+            ):
+            self.constraints['geo']['ncnvx'] = 0
+
         if (self.side<=2 or
-            (self.side<=4 and self.constraints['geometry']['cntrd']) or
-            self.constraints['geometry']['cnvex'] or
-            self.constraints['geometry']['prdct'] or
-            self.constraints['topology']['simpl']):
-            self.constraints['topology']['nsimp'] = 0
+            self.constraints['geo']['cnvex'] or
+            self.constraints['geo']['prdct'] or
+            self.constraints['top']['simpl']):
+            self.constraints['top']['nsmpl'] = 0
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-    #~~~~~~~~~  0.1 Rejection-Sample Blocks Based on Constraints  ~~~~~~~~~~~~#
+    #~~~~~~~~~  0.1 Rejection-Sample Blocks (Approximately)  ~~~~~~~~~~~~~~~~~#
 
     def search(self):
         '''
@@ -118,35 +130,37 @@ class Block:
     def propose(self):
         '''
         '''
-        #-------------  0.2.0 sample a nonempty array  -----------------------#
+        #-------------  0.2.0 sample block, sparsely if constrained  ---------# 
 
         base_prob = 1.0 / (
               2.0
-            * 2.5       ** sum(self.constraints['sym-axes'].values())
-            * 4.0       **     self.constraints['geometry']['brdrd']
-            * self.side **     self.constraints['geometry']['cnvex']
-            * self.side ** (   self.constraints['geometry']['prdct'])
-            * 6.0       ** max(self.constraints['topology']['kconn'],
-                               self.constraints['topology']['fconn'])
-            * self.side **     self.constraints['topology']['simpl']
+            * 2.5       ** sum(self.constraints['sym'].values())
+            * 4.0       **     self.constraints['geo']['brdrd']
+            * self.side **     self.constraints['geo']['cnvex']
+            * self.side ** (   self.constraints['geo']['prdct'])
+            * 6.0       ** max(self.constraints['top']['kconn'],
+                             self.constraints['top']['fconn'])
+            * self.side **     self.constraints['top']['simpl']
         )  
         arr = np.random.binomial(1, base_prob, (self.side, self.side))
+
+        #-------------  0.2.1 ensure block is nonempty  ----------------------#
+
         arr[np.random.randint(self.side), np.random.randint(self.side)] = 1
 
-        #-------------  0.2.1 adjust toward symmetry requirements  -----------#
+        #-------------  0.2.2 adjust toward symmetry requirements  -----------#
 
         for axis in Block.transfs_by_axis:
             if not self.passes_sym_req(arr, axis):
                 self.make_more_sym(arr, axis)
 
-        #-------------  0.2.2 adjust toward geometry requirements  -----------#
+        #-------------  0.2.3 adjust toward geo requirements  -----------#
 
         if not self.passes_geo_req(arr, 'brdrd'): self.make_more_brdrd(arr)
-        if not self.passes_geo_req(arr, 'cntrd'): self.make_more_cntrd(arr)
         if not self.passes_geo_req(arr, 'cnvex'): self.make_more_cnvex(arr)
         if not self.passes_geo_req(arr, 'prdct'): self.make_more_prdct(arr)
 
-        #-------------  0.2.3 adjust toward topology requirements  -----------#
+        #-------------  0.2.4 adjust toward top requirements  -----------#
 
         if not (self.passes_top_req(arr, 'kconn') and
                 self.passes_top_req(arr, 'fconn')):
@@ -186,10 +200,10 @@ class Block:
     #~~~~~~~~~  1.0 Check Symmetry Predicates  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
     transfs_by_axis = {
-        'verti': (lambda arr: arr[:, ::-1]                             ),
-        'horiz': (lambda arr: arr[::-1, :]                             ),
-        'slash': (lambda arr: np.transpose(arr[::-1])[::-1]            ),
-        'blash': (lambda arr: np.transpose(arr)                        ),
+        'verti': (lambda arr: arr[:, ::-1]                 ),
+        'horiz': (lambda arr: arr[::-1, :]                 ),
+        'slash': (lambda arr: np.transpose(arr[::-1])[::-1]),
+        'blash': (lambda arr: np.transpose(arr)            ),
     }
 
     def check_sym_pred_by_nm(self, arr, axis): 
@@ -202,7 +216,7 @@ class Block:
         '''
         '''
         return (
-            not self.constraints['sym-axes'][axis] or
+            not self.constraints['sym'][axis] or
             self.check_sym_pred_by_nm(arr, axis)
         )
 
@@ -245,16 +259,6 @@ class Block:
                     return False 
         return True
 
-    def check_cntrd(self, arr):
-        '''
-        '''
-        half = self.side//2
-        if self.side%2==0 and np.min(arr[half-1:half+1, half-1:half+1])!=1:
-            return False
-        elif self.side%2==1 and arr[half, half]!=1:
-            return False
-        return True
-
     def check_cnvex(self, arr):
         '''
         '''
@@ -273,6 +277,11 @@ class Block:
                     return False
         return True
 
+    def check_ncnvx(self, arr):
+        '''
+        '''
+        return not self.check_cnvex(arr)  
+
     def check_prdct(self, arr):
         '''
         '''
@@ -285,8 +294,8 @@ class Block:
 
     geo_preds_by_nm = {
         'brdrd': check_brdrd,
-        'cntrd': check_cntrd,
         'cnvex': check_cnvex,
+        'ncnvx': check_ncnvx,
         'prdct': check_prdct,
     }
 
@@ -294,7 +303,7 @@ class Block:
         '''
         '''
         return (
-            not self.constraints['geometry'][pred_nm] or
+            not self.constraints['geo'][pred_nm] or
             Block.geo_preds_by_nm[pred_nm](self, arr)
         )
 
@@ -322,18 +331,6 @@ class Block:
         arr[rmin:rmax+1,cmax] = 1
         arr[rmin,cmin:cmax+1] = 1
         arr[rmax,cmin:cmax+1] = 1
-
-    def make_more_cntrd(self, arr):
-        '''
-        '''
-        if self.check_cntrd(arr):
-            return
-
-        half = self.side//2
-        if self.side%2==0:
-            arr[half-1:half+1, half-1:half+1] = 1
-        else:
-            arr[half, half] = 1
 
     def make_more_cnvex(self, arr):
         '''
@@ -374,7 +371,7 @@ class Block:
         'kconn': lambda dr, dc: max(abs(dr),abs(dc))==1,
         'fconn': lambda dr, dc: abs(dr)+abs(dc)==1,     
         'simpl': lambda dr, dc: abs(dr)+abs(dc)==1,
-        'nsimp': lambda dr, dc: None,
+        'nsmpl': lambda dr, dc: None,
     }
 
     def check_connected(self, arr, offset_pred):
@@ -415,7 +412,7 @@ class Block:
     def check_top_req(self, arr, nm):
         '''
         '''
-        if nm=='nsimp':
+        if nm=='nsmpl':
             return not self.check_top_req(arr, 'simpl')
         elif nm=='simpl':
 
@@ -430,7 +427,7 @@ class Block:
         '''
         '''
         return (
-            not self.constraints['topology'][pred_nm] or
+            not self.constraints['top'][pred_nm] or
             self.check_top_req(arr, pred_nm)
         )
 
