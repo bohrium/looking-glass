@@ -1,5 +1,5 @@
 ''' author: samtenka
-    change: 2020-02-15
+    change: 2020-02-16
     create: 2019-02-15
     descrp: visualize terms
     to use: 
@@ -7,7 +7,7 @@
 
 from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
-from utils import prod, reseed, bernoulli, geometric    #math
+from utils import prod, reseed, bernoulli, geometric    # math
 
 import numpy as np
 
@@ -23,19 +23,20 @@ import numpy as np
     Block Language:
         Constraints:
             Reflection Symmetries [A]:
-                1/4  chance enforce vertical axis 
+                1/2  chance enforce vertical axis 
                 1/4  chance enforce horizontal axis 
-                1/4  chance enforce slash axis 
-                1/4  chance enforce backslash axis 
+                1/16 chance enforce slash axis 
+                1/16 chance enforce backslash axis 
             Geometry: 
-                1/4  chance contains central pixel(s)
-                1/4  chance contains border
-                1/4  chance ms-paint convex
-                1/4  chance is a product of sets
+                1/8  chance contains central pixel(s)
+                1/8  chance contains border
+                1/8  chance ms-paint convex
+                1/16 chance is a product of sets
             Topology:
-                1/4  chance enforce king connectedness
+                1/2  chance enforce king connectedness
                 1/4  chance enforce ferz connectedness [B]
                 1/4  chance enforce simple connectedness
+                1/8  chance enforce non-(simple connectedness)
 
     [A] Together generate 4 rotations, too.  But not every D4 subgroup arises.
     [B] See `en.wikipedia.org/wiki/Fairy_chess_piece`
@@ -44,24 +45,34 @@ class Block:
     def __init__(self):
         self.constraints = {
             'sym-axes': {
-                'verti': bernoulli(1.0/4),
+                'verti': bernoulli(1.0/2),
                 'horiz': bernoulli(1.0/4),
-                'slash': bernoulli(1.0/4),
-                'blash': bernoulli(1.0/4),
+                'slash': bernoulli(1.0/16),
+                'blash': bernoulli(1.0/16),
             },
             'geometry': {
-                'brdrd': bernoulli(1.0/4),
-                'cntrd': bernoulli(1.0/4),
-                'cnvex': bernoulli(1.0/4),
-                'prdct': bernoulli(1.0/4),
+                'brdrd': bernoulli(1.0/8),
+                'cntrd': bernoulli(1.0/8),
+                'cnvex': bernoulli(1.0/8),
+                'prdct': bernoulli(1.0/16),
             },
             'topology': {
-                'kconn': bernoulli(1.0/4),
+                'kconn': bernoulli(1.0/2),
                 'fconn': bernoulli(1.0/4),
-                'simpl': bernoulli(1.0/4),
+                'simpl': bernoulli(1.0/8),
+                'nsimp': bernoulli(2.0/8), # 2.0 to counter overruling by others
             },
         }
-        self.side = 2 + sum(bernoulli(0.25) for _ in range(4))
+
+        self.side = 2 + sum(bernoulli(0.25) for _ in range(6))
+
+        if (self.side<=2 or
+            (self.side<=4 and self.constraints['geometry']['cntrd']) or
+            self.constraints['geometry']['cnvex'] or
+            self.constraints['geometry']['prdct'] or
+            self.constraints['topology']['simpl']):
+            self.constraints['topology']['nsimp'] = 0
+
 
     def check_sides(self, arr): 
         pre(arr.shape == (self.side, self.side), 'expected side x side array') 
@@ -195,7 +206,8 @@ class Block:
     offset_preds_by_top_pred_nm = {
         'kconn': lambda dr, dc: max(abs(dr),abs(dc))==1,
         'fconn': lambda dr, dc: abs(dr)+abs(dc)==1,     
-        'simpl': lambda dr, dc: abs(dr)+abs(dc)==1,     
+        'simpl': lambda dr, dc: abs(dr)+abs(dc)==1,
+        'nsimp': lambda dr, dc: None,
     }
     def check_connected(self, arr, offset_pred):
         offsets = [
@@ -203,8 +215,8 @@ class Block:
             if offset_pred(dr, dc)
         ] 
 
-        points = set((r,c) for r in range(self.side)
-                     for c in range(self.side) if arr[r,c])
+        points = set((r,c) for r in range(arr.shape[0])
+                     for c in range(arr.shape[1]) if arr[r,c])
         if not points:
             return True
 
@@ -221,7 +233,9 @@ class Block:
         return len(seen) == len(points)
 
     def check_top_req(self, arr, nm):
-        if nm=='simpl':
+        if nm=='nsimp':
+            return not self.check_top_req(arr, 'simpl')
+        elif nm=='simpl':
             # border with 0's
             new_arr = np.ones((self.side+2, self.side+2))
             new_arr[1:self.side+1, 1:self.side+1] = 1-arr
@@ -261,12 +275,12 @@ class Block:
         return True
 
     def propose(self):
-        base_prob = 1.0 / min(self.side*self.side, 
+        base_prob = 1.0 / (
               2.0
-            * 2.0       ** sum(self.constraints['sym-axes'].values())
+            * 2.5       ** sum(self.constraints['sym-axes'].values())
             * 4.0       **     self.constraints['geometry']['brdrd']
             * self.side **     self.constraints['geometry']['cnvex']
-            * self.side ** (2* self.constraints['geometry']['prdct'])
+            * self.side ** (   self.constraints['geometry']['prdct'])
             * 6.0       ** max(self.constraints['topology']['kconn'],
                                self.constraints['topology']['fconn'])
             * self.side **     self.constraints['topology']['simpl']
@@ -294,12 +308,15 @@ class Block:
         while True:
             arr = self.propose()
 
+            # retry if not big enough 
             if np.sum(arr) == 0: continue
-            inhabited_rows = np.nonzero(np.sum(arr, axis=0)) 
-            inhabited_cols = np.nonzero(np.sum(arr, axis=1))
-            if ((np.amin(inhabited_rows), np.amax(inhabited_rows))!=(0, self.side-1) and
-                (np.amin(inhabited_cols), np.amax(inhabited_cols))!=(0, self.side-1)):
-                    continue
+            inhab_rows = np.nonzero(np.sum(arr, axis=0)) 
+            inhab_cols = np.nonzero(np.sum(arr, axis=1))
+            rmin, rmax = np.amin(inhab_rows), np.amax(inhab_rows)
+            cmin, cmax = np.amin(inhab_cols), np.amax(inhab_cols)
+            if ((rmin, rmax)!=(0, self.side-1) and
+                (cmin, cmax)!=(0, self.side-1)):
+                continue
 
             if not self.passes_all_sym_reqs(arr): continue
             if not self.passes_all_geo_reqs(arr): continue
