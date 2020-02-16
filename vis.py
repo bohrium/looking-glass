@@ -30,7 +30,7 @@ import numpy as np
             Geometry: 
                 1/4  chance contains central pixel(s)
                 1/4  chance contains border
-                1/4  chance ms-paint convex
+                1/16 chance ms-paint convex
                 1/16 chance is a product of sets
             Topology:
                 1/2  chance enforce king connectedness
@@ -46,31 +46,31 @@ class Block:
             'sym-axes': {
                 'verti': bernoulli(1.0/4),
                 'horiz': bernoulli(1.0/4),
-                'slash': bernoulli(1.0/16),
-                'blash': bernoulli(1.0/16),
+                'slash': bernoulli(1.0/4),
+                'blash': bernoulli(1.0/4),
             },
             'geometry': {
                 'brdrd': bernoulli(1.0/4),
                 'cntrd': bernoulli(1.0/4),
                 'cnvex': bernoulli(1.0/4),
-                'prdct': bernoulli(1.0/16),
+                'prdct': bernoulli(1.0/4),
             },
             'topology': {
-                'kconn': bernoulli(1.0/2),
+                'kconn': bernoulli(1.0/4),
                 'fconn': bernoulli(1.0/4),
-                'simpl': bernoulli(1.0/8),
+                'simpl': bernoulli(1.0/4),
             },
         }
-        self.side = 5#2 + sum(geometric(0.25) for _ in range(4))
+        self.side = 2 + sum(geometric(0.25) for _ in range(4))
 
     def check_sides(self, arr): 
         pre(arr.shape == (self.side, self.side), 'expected side x side array') 
 
     transfs_by_axis = {
-        'verti': (lambda arr: arr[:, ::-1]                          ),
-        'horiz': (lambda arr: arr[::-1, :]                          ),
-        'slash': (lambda arr: np.rot90(np.transpose(np.rot90(arr))) ),
-        'blash': (lambda arr: np.transpose(arr)                     ),
+        'verti': (lambda arr: arr[:, ::-1]                             ),
+        'horiz': (lambda arr: arr[::-1, :]                             ),
+        'slash': (lambda arr: np.transpose(arr[::-1])[::-1]        ),
+        'blash': (lambda arr: np.transpose(arr)                        ),
     }
     def obeys_sym_constraints(self, arr): 
         self.check_sides(arr)
@@ -104,8 +104,13 @@ class Block:
             for p in points:
                 for q in points:
                     if p <= q: continue 
-                    mid = (int((p[0]+q[0])/2.0), int((p[1]+q[1])/2.0))
-                    if not arr[mid[0], mid[1]]:
+                    mid = ((p[0]+q[0])/2.0, (p[1]+q[1])/2.0)
+                    nb_hits = sum(
+                        arr[int(rround(mid[0])), int(cround(mid[1]))]
+                        for rround in (np.ceil, np.floor)
+                        for cround in (np.ceil, np.floor)
+                    )
+                    if nb_hits==0:
                         return False
 
         if self.constraints['geometry']['prdct']:
@@ -241,9 +246,9 @@ class Block:
                 (np.amin(inhabited_cols), np.amax(inhabited_cols))!=(0, self.side-1)):
                     continue
 
-            #if not self.obeys_sym_constraints(arr): continue
+            if not self.obeys_sym_constraints(arr): continue
             if not self.obeys_geo_constraints(arr): continue
-            #if not self.obeys_top_constraints(arr): continue
+            if not self.obeys_top_constraints(arr): continue
             return arr
 
     def colored(self, arrs):
