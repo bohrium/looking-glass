@@ -28,7 +28,7 @@ class Block:
                 1/8  chance contains border
                 1/8  chance ms-paint convex
                 1/8  chance not (ms-paint convex) [B]
-                1/16 chance is a product of sets
+                1/8  chance is a product of sets
             Topology:
                 3/4  chance enforce king connectedness
                 1/4  chance enforce ferz connectedness [C]
@@ -63,7 +63,7 @@ class Block:
                 'brdrd': bernoulli(1.0/8),
                 'cnvex': bernoulli(1.0/8),
                 'ncnvx': bernoulli(2.0/8), # 2.0 counters overruling by others
-                'prdct': bernoulli(1.0/16),
+                'prdct': bernoulli(1.0/8),
             },
             'top': {
                 'kconn': bernoulli(3.0/4),
@@ -127,8 +127,8 @@ class Block:
 
             #---------  0.1.0 encourage spanning of height or width  ---------#
 
-            inhab_rows = np.nonzero(np.sum(arr, axis=0)) 
-            inhab_cols = np.nonzero(np.sum(arr, axis=1))
+            inhab_rows = np.nonzero(np.sum(arr, axis=1)) 
+            inhab_cols = np.nonzero(np.sum(arr, axis=0))
             rmin, rmax = np.amin(inhab_rows), np.amax(inhab_rows)
             cmin, cmax = np.amin(inhab_cols), np.amax(inhab_cols)
             if ((rmin, rmax)!=(0, self.side-1) and
@@ -141,7 +141,14 @@ class Block:
             if not self.passes_all_geo_reqs(arr): continue
             if not self.passes_all_top_reqs(arr): continue
 
-            return arr
+            #---------  0.1.2 crop  ------------------------------------------#
+
+            #inhab_rows = np.nonzero(np.sum(arr, axis=1)) 
+            #inhab_cols = np.nonzero(np.sum(arr, axis=0))
+            #rmin, rmax = np.amin(inhab_rows), np.amax(inhab_rows)
+            #cmin, cmax = np.amin(inhab_cols), np.amax(inhab_cols)
+
+            return arr[rmin:rmax+1,cmin:cmax+1]
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~  0.2 Constraint-Guided Block Proposal  ~~~~~~~~~~~~~~~~~~~~~~~~#
