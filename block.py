@@ -5,9 +5,9 @@
     to use: 
 '''
 
-from utils import CC, pre                       # ansi
-from utils import secs_endured, megs_alloced    # profiling
-from utils import reseed, bernoulli, geometric  # math
+from utils import CC, pre                               # ansi
+from utils import secs_endured, megs_alloced            # profiling
+from utils import reseed, bernoulli, geometric, uniform # math
 
 import numpy as np
 
@@ -20,7 +20,7 @@ class Block:
         Blocks are subject to a randomly sampled set of constraints:
 
             Reflection Symmetries [A]:
-                1/2  chance enforce vertical axis 
+                1/4  chance enforce vertical axis 
                 1/4  chance enforce horizontal axis 
                 1/8  chance enforce slash axis 
                 1/8  chance enforce backslash axis 
@@ -33,7 +33,7 @@ class Block:
                 3/4  chance enforce king connectedness
                 1/4  chance enforce ferz connectedness [C]
                 1/4  chance enforce simple connectedness [D]
-                1/8  chance enforce non-(simple connectedness) [B, D]
+                1/4  chance enforce non-(simple connectedness) [B, D]
 
         [A] These reflections together generate rotations, too.  But not every
             D4 subgroup arises.
@@ -54,22 +54,22 @@ class Block:
 
         self.base_constraints = {
             'sym': {
-                'verti': bernoulli(0*1.0/2),
-                'horiz': bernoulli(0*1.0/4),
-                'slash': bernoulli(0*1.0/8),
-                'blash': bernoulli(0*1.0/8),
+                'verti': bernoulli(1.0/4),
+                'horiz': bernoulli(1.0/4),
+                'slash': bernoulli(1.0/8),
+                'blash': bernoulli(1.0/8),
             },
             'geo': {
-                'brdrd': bernoulli(0*1.0/8),
-                'cnvex': bernoulli(0*1.0/8),
-                'ncnvx': bernoulli(0*2.0/8), # 2.0 counters overruling by others
-                'prdct': bernoulli(1+0*1.0/16),
+                'brdrd': bernoulli(1.0/8),
+                'cnvex': bernoulli(1.0/8),
+                'ncnvx': bernoulli(2.0/8), # 2.0 counters overruling by others
+                'prdct': bernoulli(1.0/16),
             },
             'top': {
-                'kconn': bernoulli(0*3.0/4),
-                'fconn': bernoulli(1+0*1.0/4),
-                'simpl': bernoulli(0*1.0/8),
-                'nsmpl': bernoulli(0*2.0/8), # 2.0 counters overruling by others
+                'kconn': bernoulli(3.0/4),
+                'fconn': bernoulli(0*1.0/4),
+                'simpl': bernoulli(1.0/4),
+                'nsmpl': bernoulli(0*2.0/4), # 2.0 counters overruling by others
             },
         }
 
@@ -81,7 +81,7 @@ class Block:
         '''
         #-------------  0.0.1 sample side length  ----------------------------#
 
-        self.side = 4 + 0*(
+        self.side = (
             2 + sum(bernoulli(1.0/6) for _ in range(6))
             if side is None else side
         )
@@ -132,7 +132,7 @@ class Block:
             rmin, rmax = np.amin(inhab_rows), np.amax(inhab_rows)
             cmin, cmax = np.amin(inhab_cols), np.amax(inhab_cols)
             if ((rmin, rmax)!=(0, self.side-1) and
-                (cmin, cmax)!=(0, self.side-1)) and bernoulli(0.9):
+                (cmin, cmax)!=(0, self.side-1)) and bernoulli(0.8):
                 continue
 
             #---------  0.1.1 retry if doesn't meet specifications  ----------#
@@ -153,8 +153,8 @@ class Block:
 
         base_prob = 1.0 / (
               2.0
-            * 2.5       ** sum(self.constraints['sym'].values())
-            * 4.0       **     self.constraints['geo']['brdrd']
+            #* 2.5       ** sum(self.constraints['sym'].values())
+            * 2.0       **     self.constraints['geo']['brdrd']
             * self.side ** max(self.constraints['top']['kconn'],
                                self.constraints['top']['fconn'])
             * self.side ** max(self.constraints['geo']['prdct'],
@@ -256,7 +256,8 @@ class Block:
         '''
         if self.check_sym_pred_by_nm(arr, axis):
             return
-        arr[:] = np.maximum(arr, Block.transfs_by_axis[axis](arr))  
+        op = uniform([np.maximum, np.minimum])
+        arr[:] = op(arr, Block.transfs_by_axis[axis](arr))  
 
     #=========================================================================#
     #=  2. IMPLEMENT GEOMETRY CONCEPTS  ======================================#
@@ -268,15 +269,20 @@ class Block:
     def check_brdrd(self, arr):
         '''
         '''
+        if np.sum(arr)==0:
+            return False
+
         inhab_rows = np.nonzero(np.sum(arr, axis=1)) 
         inhab_cols = np.nonzero(np.sum(arr, axis=0))
         rmin, rmax = np.amin(inhab_rows), np.amax(inhab_rows)
         cmin, cmax = np.amin(inhab_cols), np.amax(inhab_cols)
 
-        for edge in (arr[rmin:rmax+1,cmin], arr[rmin,cmin:cmax+1]):
-            for hasendpt in (np.amin, np.amax):
-                if not hasendpt(edge):
-                    return False 
+        for edge in (arr[rmin:rmax+1,cmin],
+                     arr[rmin:rmax+1,cmax],
+                     arr[rmin,cmin:cmax+1],
+                     arr[rmax,cmin:cmax+1]):
+            if np.amin(edge)==0:
+                return False 
         return True
 
     def check_cnvex(self, arr):
@@ -342,6 +348,9 @@ class Block:
         '''
         '''
         if self.check_brdrd(arr):
+            return
+        if np.sum(arr)==0:
+            arr[uniform(self.side), uniform(self.side)] = 1
             return
         inhab_rows = np.nonzero(np.sum(arr, axis=1)) 
         inhab_cols = np.nonzero(np.sum(arr, axis=0))
