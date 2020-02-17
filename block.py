@@ -20,10 +20,10 @@ class Block:
         Blocks are subject to a randomly sampled set of constraints:
 
             Reflection Symmetries [A]:
-                1/4  chance enforce vertical axis 
+                1/2  chance enforce vertical axis 
                 1/4  chance enforce horizontal axis 
-                1/16 chance enforce slash axis 
-                1/16 chance enforce backslash axis 
+                1/8  chance enforce slash axis 
+                1/8  chance enforce backslash axis 
             Geometry: 
                 1/8  chance contains border
                 1/8  chance ms-paint convex
@@ -47,47 +47,65 @@ class Block:
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~  0.0 Sample Parameters of Block Type  ~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-    def __init__(self):
+    def __init__(self, side=None):
         '''
         '''
-        #-------------  0.0.0 sample side length  ----------------------------#
+        #-------------  0.0.0 sample constraint set  -------------------------#
 
-        self.side = 2 + sum(bernoulli(1.0/4) for _ in range(6))
-
-        #-------------  0.0.1 sample constraint set  -------------------------#
-
-        self.constraints = {
+        self.base_constraints = {
             'sym': {
-                'verti': bernoulli(1.0/4),
-                'horiz': bernoulli(1.0/4),
-                'slash': bernoulli(1.0/16),
-                'blash': bernoulli(1.0/16),
+                'verti': bernoulli(0*1.0/2),
+                'horiz': bernoulli(0*1.0/4),
+                'slash': bernoulli(0*1.0/8),
+                'blash': bernoulli(0*1.0/8),
             },
             'geo': {
-                'brdrd': bernoulli(1.0/8),
-                'cnvex': bernoulli(1.0/8),
-                'ncnvx': bernoulli(2.0/8), # 2.0 counters overruling by others
-                'prdct': bernoulli(1.0/16),
+                'brdrd': bernoulli(0*1.0/8),
+                'cnvex': bernoulli(0*1.0/8),
+                'ncnvx': bernoulli(0*2.0/8), # 2.0 counters overruling by others
+                'prdct': bernoulli(1+0*1.0/16),
             },
             'top': {
-                'kconn': bernoulli(3.0/4),
-                'fconn': bernoulli(1.0/4),
-                'simpl': bernoulli(1.0/8),
-                'nsmpl': bernoulli(2.0/8), # 2.0 counters overruling by others
+                'kconn': bernoulli(0*3.0/4),
+                'fconn': bernoulli(1+0*1.0/4),
+                'simpl': bernoulli(0*1.0/8),
+                'nsmpl': bernoulli(0*2.0/8), # 2.0 counters overruling by others
             },
         }
 
+        self.set_side()
+
+
+    def set_side(self, side=None):
+        '''
+        '''
+        #-------------  0.0.1 sample side length  ----------------------------#
+
+        self.side = 4 + 0*(
+            2 + sum(bernoulli(1.0/6) for _ in range(6))
+            if side is None else side
+        )
+
         #-------------  0.0.2 prevent constraint conflicts  ------------------#
+
+        self.constraints = {
+            cls_nm: {nm: val for nm,val in cls_val.items()}
+            for cls_nm, cls_val in self.base_constraints.items()
+        } 
 
         if (self.side<=2 or 
             self.side<=3 and self.constraints['top']['nsmpl'] or
             self.constraints['geo']['cnvex'] or 
             sum(int(self.constraints[con][nm])*w for con, nm, w in
                 (('geo', 'brdrd', 1.0),
-                 ('geo', 'prdct', 1.6),
-                 ('top', 'kconn', 0.4),
-                 ('top', 'fconn', 0.4),
-                 ('top', 'simpl', 1.0),)) >= 2.0
+                 ('geo', 'prdct', 1.8),
+                 ('top', 'kconn', 0.2),
+                 ('top', 'fconn', 0.2),
+                 ('sym', 'verti', 0.1),
+                 ('sym', 'horiz', 0.1),
+                 ('sym', 'slash', 0.1),
+                 ('sym', 'blash', 0.1),
+                 ('top', 'simpl', 1.9),)) >= 2.0
             ):
             self.constraints['geo']['ncnvx'] = 0
 
@@ -105,15 +123,16 @@ class Block:
         '''
         while True:
             arr = self.propose()
+            if np.sum(arr)==0: continue
 
-            #---------  0.1.0 retry if doesn't span height or width  ---------#
+            #---------  0.1.0 encourage spanning of height or width  ---------#
 
             inhab_rows = np.nonzero(np.sum(arr, axis=0)) 
             inhab_cols = np.nonzero(np.sum(arr, axis=1))
             rmin, rmax = np.amin(inhab_rows), np.amax(inhab_rows)
             cmin, cmax = np.amin(inhab_cols), np.amax(inhab_cols)
             if ((rmin, rmax)!=(0, self.side-1) and
-                (cmin, cmax)!=(0, self.side-1)):
+                (cmin, cmax)!=(0, self.side-1)) and bernoulli(0.9):
                 continue
 
             #---------  0.1.1 retry if doesn't meet specifications  ----------#
@@ -136,17 +155,18 @@ class Block:
               2.0
             * 2.5       ** sum(self.constraints['sym'].values())
             * 4.0       **     self.constraints['geo']['brdrd']
-            * self.side **     self.constraints['geo']['cnvex']
-            * self.side ** (   self.constraints['geo']['prdct'])
-            * 6.0       ** max(self.constraints['top']['kconn'],
-                             self.constraints['top']['fconn'])
-            * self.side **     self.constraints['top']['simpl']
+            * self.side ** max(self.constraints['top']['kconn'],
+                               self.constraints['top']['fconn'])
+            * self.side ** max(self.constraints['geo']['prdct'],
+                               self.constraints['geo']['cnvex'],
+                               self.constraints['top']['simpl'])
         )  
         arr = np.random.binomial(1, base_prob, (self.side, self.side))
 
         #-------------  0.2.1 ensure block is nonempty  ----------------------#
 
-        arr[np.random.randint(self.side), np.random.randint(self.side)] = 1
+        for _ in range(2):
+            arr[np.random.randint(self.side), np.random.randint(self.side)] = 1
 
         #-------------  0.2.2 adjust toward symmetry requirements  -----------#
 
@@ -165,8 +185,8 @@ class Block:
         if not (self.passes_top_req(arr, 'kconn') and
                 self.passes_top_req(arr, 'fconn')):
             self.make_more_connected(arr)
-        if not self.passes_top_req(arr, 'simpl'):
-            self.make_more_cnvex(arr)
+        if not self.passes_top_req(arr, 'simpl'): self.make_more_cnvex(arr)
+        if not self.passes_top_req(arr, 'nsmpl'): self.make_more_holey(arr)
 
         return arr
 
@@ -184,7 +204,7 @@ class Block:
         return str(CC + '\n'.join(
             ' '.join(
                 '|' + ''.join(
-                    ('@M []@D ' if arr[r,c] else '@W   @D ')
+                    ('@P []@D ' if arr[r,c] else '@W   @D ')
                     for c in range(self.side)
                 ) + '|'
                 for arr in arrs
@@ -285,8 +305,8 @@ class Block:
     def check_prdct(self, arr):
         '''
         '''
-        proj_by_row = np.sum(arr, axis=0) 
-        proj_by_col = np.sum(arr, axis=1) 
+        proj_by_row = np.sum(arr, axis=1) 
+        proj_by_col = np.sum(arr, axis=0) 
         reconstruction = np.minimum(1, np.outer(proj_by_row, proj_by_col))
         if not np.array_equal(arr, reconstruction):
             return False
@@ -354,8 +374,8 @@ class Block:
         '''
         if self.check_prdct(arr):
             return
-        proj_by_row = np.sum(arr, axis=0) 
-        proj_by_col = np.sum(arr, axis=1)
+        proj_by_row = np.sum(arr, axis=1) 
+        proj_by_col = np.sum(arr, axis=0)
         arr[:] = np.minimum(1, np.outer(proj_by_row, proj_by_col))
 
     #=========================================================================#
@@ -457,7 +477,7 @@ class Block:
             if Block.offset_preds_by_top_pred_nm['fconn'](dr, dc)
         ] 
 
-        is_neighbor = lambda r,c,dr,dc: min(bernoulli(1.0/2), 
+        is_neighbor = lambda r,c,dr,dc: min(bernoulli(1.0/4), 
             1 if ( 
                 0<=r+dr<self.side and 0<=c+dc<self.side
                 and arr[r+dr,c+dc]
@@ -472,16 +492,24 @@ class Block:
                     sum(is_neighbor(r,c,dr,dc) for dr,dc in offsets)
                 ))
 
+    def make_more_holey(self, arr):
+        half = self.side//2
+        if self.side%2==0:
+            arr[half,half]=0
+        else:
+            arr[half-1:half+1 , half-1:half+1]=0
+
 #=============================================================================#
 #=====  4. SAMPLE and DISPLAY BLOCK TYPES  ===================================#
 #=============================================================================#
 
-nb_classes = 5
-text_width = 120
-
-for _ in range(nb_classes): 
-    B = Block()
-    print(CC + '@Y {} @D '.format(str(B.constraints)))
-    print(CC + '@D {} @D '.format(str(B.side)))
-    print(B.colored([B.search() for _ in range(text_width//(3+2*B.side))]))
-    print()
+if __name__=='__main__':
+    nb_classes = 5
+    text_width = 120
+    
+    for _ in range(nb_classes): 
+        B = Block()
+        print(CC + '@Y {} @D '.format(str(B.constraints)))
+        print(CC + '@D {} @D '.format(str(B.side)))
+        print(B.colored([B.search() for _ in range(text_width//(3+2*B.side))]))
+        print()
