@@ -44,6 +44,12 @@ class Scene:
                 self.blocks.append((block, r, c, color))
                 break
 
+    def noise(self, colors=GENERIC_COLORS):
+        for r in range(self.H):
+            for c in range(self.W):
+                if bernoulli(0.95): continue
+                self.colors[r,c] = uniform(colors) 
+
     def sample_occupied(self):
         while True:
             r, c = uniform(self.H), uniform(self.W) 
@@ -51,7 +57,6 @@ class Scene:
 
     def get_ray(self, r, c, dr, dc):
         cells = []
-        rr, cc = r+dr, c+dc
         for t in range(1, max(self.H, self.W)):
             rr, cc = r+t*dr, c+t*dc
             if not (0<=rr<self.H and 0<=cc<self.W): break
@@ -124,26 +129,29 @@ def concat_multilines(displays):
     )
 
 if __name__=='__main__':
-    size = 12+geometric(3)
-    print(size)
-    S = Scene(size, size)
-    S.sample_blocks(6)
+    for _ in range(2):
+        size = 12+geometric(3)
+        print(size)
+        S = Scene(size, size)
+        S.noise(colors=['A'])
+        S.sample_blocks(6)
+    
+        rays = [] 
+        while len(rays) < 2:
+            rays = []
+            r,c = S.sample_occupied()
+            for dr in [-1, 0, 1]: 
+                for dc in [-1, 0, 1]: 
+                    if abs(dr)+abs(dc)!=1: continue
+                    ray = S.get_ray(r,c, dr, dc)
+                    if len(ray) <= 1: continue
+                    rays.append(ray)
+        for ray in rays:
+            S.render_ray(ray, 'A')
 
-    rays = [] 
-    while len(rays) < 2:
-        rays = []
-        r,c = S.sample_occupied()
-        for dr in [-1, 1]: 
-            for dc in [-1, 1]: 
-                ray = S.get_ray(r,c, dr, dc)
-                if len(ray) <= 1: continue
-                rays.append(ray)
-    for ray in rays:
-        S.render_ray(ray, 'A')
-
-    block = S.blocks[S.block_ids[r,c]]
-    block, col = block[0], block[3]
-    Q = Scene(block.shape[0], block.shape[1])
-    Q.place_block(block, 0,0, col, 0)
-
-    print(CC+concat_multilines([str(S), str(Q)]))
+        block = S.blocks[S.block_ids[r,c]]
+        block, col = block[0], block[3]
+        Q = Scene(block.shape[0], block.shape[1])
+        Q.place_block(block, 0,0, col, 0)
+    
+        print(CC+concat_multilines([str(S), str(Q)]))
