@@ -19,4 +19,9 @@ GENERIC_COLORS = 'BRGYPOCN'
 COLORS = SPECIAL_COLORS + GENERIC_COLORS
 
 Block = namedtuple('Block', ['shape', 'color']) 
-
+def block_equals(lhs, rhs):
+    return (
+            lhs.color==rhs.color
+        and lhs.shape.shape==rhs.shape.shape
+        and np.sum(np.abs(lhs.shape-rhs.shape))==0
+    )

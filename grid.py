@@ -27,10 +27,10 @@ class Grid:
 
     def copy(self):
         G = Grid(self.H, self.W)
-        G.colors = self.colors[:,:]
-        G.occupd = self.occupd[:,:]
-        G.weakoc = self.weakoc[:,:]
-        G.blkids = self.blkids[:,:]
+        G.colors = np.copy(self.colors)
+        G.occupd = np.copy(self.occupd)
+        G.weakoc = np.copy(self.weakoc)
+        G.blkids = np.copy(self.blkids)
         return G
 
     def fill(self, color, cell_pos):
@@ -66,16 +66,14 @@ class Grid:
     def render_blocks(self, blocks, nb_tries_per_block=5):
         for i, block in enumerate(blocks):
             h, w = block.shape.shape
+            if self.H<h or self.W<w: return None
             for _ in range(nb_tries_per_block):
-                #r, c = uniform(self.H-h), uniform(self.W-w)
-                r, c = uniform(self.H), uniform(self.W)
+                r, c = uniform(self.H-h+1), uniform(self.W-w+1)
                 if not self.block_in_bounds(block.shape, r, c): continue
                 if self.block_touches(block.shape, r, c): continue
                 self.place_block(block.shape, r, c, block.color, block_id=i)
-                #self.blocks.append((block.shape, r, c, block.color))
                 break
-            else: continue
-            return None
+            else: return None
         return self
 
     def sample_occupd(self):

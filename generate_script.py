@@ -36,7 +36,7 @@ sigs_by_nm = {
     # basic samplers:
     'gen_some': tInt.frm(tNoise),                      # [1,2,3]
     'gen_svrl': tInt.frm(tNoise),                      # [3,4,5]
-    'gen_many': tInt.frm(tNoise),                      # [15...30] 
+    #'gen_many': tInt.frm(tNoise),                      # [15...30] 
     'gen_cell': tCell.frm(tGrid).frm(tNoise),          # uniform cell
     'gray'    : tColor,                                # 'A'
     'gen_rain': tColor.frm(tNoise),                    # GENERIC_COLORS
@@ -60,8 +60,10 @@ sigs_by_nm = {
     ## list helpers:
     #'sing_cols': tColor.s().frm(tColor),
     #'cons_cols': tColor.s().frm(tColor).frm(tColor.s()),
+    'sing_blks': tBlock.s().frm(tBlock),
     'gen_blks': tBlock.s().frm(tNoise).frm(tBlock.frm(tNoise)).frm(tInt),
     'cons_blks': tBlock.s().frm(tBlock).frm(tBlock.s()),
+    'uniq_blks': tBlock.s().frm(tBlock.s()),
 }
 
 var_count = 0
@@ -71,13 +73,10 @@ def get_fresh():
     return 'x'+str(var_count)
 
 verbose = False
-lines = 0 
 
 def construct(goal, resources):
-    global lines
     if verbose:
         print('analyzing {}'.format(str(goal)))
-        lines += 1
 
     if bernoulli(1e-4):
         return
@@ -96,7 +95,7 @@ def construct(goal, resources):
         body = construct(goal, resources)
         #return '(({}->{})({}))'.format(var_nm, body, arg)
         return {
-            'text':'(({}->{})({}))'.format(var_nm, body['text'], arg['text']),
+            'text':'{}(({}->{})({}))'.format(var_nm, body['text'], arg['text']),
             'pyth': '(lambda {}: {})({})'.format(var_nm, body['pyth'], arg['pyth'])
         }
     elif goal.kind=='from' and bernoulli(0.8): # destruct
@@ -118,7 +117,6 @@ def construct(goal, resources):
             nm, sig, hypoths = uniform(matches) 
             if verbose:
                 print('matched {} with {}'.format(goal, nm))
-                lines += 1
             hypoths = [construct(h, resources) for h in hypoths]
             pretty_nm = str(CC+'@D '+nm+'@P ')
 
@@ -135,10 +133,9 @@ def construct(goal, resources):
             }
         else:
             return
-            #pre(False, 'no match found')
 
 def tenacious_construct(goal, add_resources={}):
-    global var_count, lines
+    global var_count
 
     resources = {k:v for k,v in sigs_by_nm.items()}
     for k,v in add_resources.items():
@@ -154,33 +151,42 @@ def tenacious_construct(goal, add_resources={}):
             return code
         except:
             var_count=0
-            #print(CC+('@^ '+' '*100)*(lines+3))
-            lines = 0 
             continue
 
 def get_script(): 
-    blocks  = tenacious_construct(tBlock.s(), {'noise':tNoise,                                                  })
-    getblock= tenacious_construct(tBlock,     {                'blocks':tBlock.s()                              })
-    grid    = tenacious_construct(tGrid,      {'noise':tNoise, 'blocks':tBlock.s(), 'block':tBlock,             })
-    X       = tenacious_construct(tGrid,      {'noise':tNoise,                      'block':tBlock, 'grid':tGrid})
-    Y       = tenacious_construct(tGrid,      {                                     'block':tBlock, 'grid':tGrid})
+    blocks  = tenacious_construct(tBlock.s(), {'noise':tNoise})
+    getblock= tenacious_construct(tBlock,     {'blocks':tBlock.s()})
+    blocks  ['pyth'] = 'lambda noise: {}'.format(blocks  ['pyth'])
+    getblock['pyth'] = 'lambda blocks: {}'.format(getblock['pyth'])
 
-    blocks  ['pyth'] = 'lambda noise: {}'                                          .format(blocks  ['pyth'])
-    getblock['pyth'] = '              lambda blocks: {}'                           .format(getblock['pyth'])
-    grid    ['pyth'] = 'lambda noise: lambda blocks: lambda block: {}'             .format(grid    ['pyth'])
-    X       ['pyth'] = 'lambda noise:                lambda block: lambda grid: {}'.format(X       ['pyth'])
-    Y       ['pyth'] = '                             lambda block: lambda grid: {}'.format(Y       ['pyth'])
+    X = {'pyth':'', 'text':''}
+    Y = {'pyth':'', 'text':''}
 
-    print(str(CC+'@O blocks  =@P '), blocks  ['text'])
-    print(str(CC+'@O getblock=@P '), getblock['text'])
-    print(str(CC+'@O grid    =@P '), grid    ['text'])
-    print(str(CC+'@O X       =@P '), X       ['text'])
-    print(str(CC+'@O Y       =@P '), Y       ['text'])
+    X['pyth'] = 'lambda noise: lambda blocks: rndr_blks(noise)(blnk_grd(10)(10))(blocks)'
+    X['text'] = '(rndr_blks noise (blnk_grd 10 10) blocks)'
+    Y['pyth'] = 'lambda block : rndr_blk (blnk_grd(height_shap(shap_blok(block)))(width_shap(shap_blok(block))))(block)'
+    Y['text'] = '(rndr_blk (blnk_grd (height_shap (shap_blok block)) (width_shap (shap_blok block))) block)'
 
-    return blocks, getblock, grid, X, Y
+    print(str(CC+'@O blocks = @P '), blocks  ['text'])
+    print(str(CC+'@O block  = @P '), getblock['text'] + ' block')
+    print(str(CC+'@O X      = @P '), X       ['text'])
+    print(str(CC+'@O Y      = @P '), Y       ['text'])
+
+    return blocks, getblock, X, Y
 
 if __name__=='__main__':
     get_script()
+
+
+
+
+
+
+#    #X       = tenacious_construct(tGrid,      {'noise':tNoise, 'blocks':tBlock.s(),                })
+#    #Y       = tenacious_construct(tGrid,      {                                     'block':tBlock,})
+#    #X       ['pyth'] = 'lambda noise: lambda blocks: {}              '.format(X       ['pyth'])
+#    #Y       ['pyth'] = '                             lambda block: {}'.format(Y       ['pyth'])
+
 
 # future:
 #'one'     : tInt,                                  # 1 

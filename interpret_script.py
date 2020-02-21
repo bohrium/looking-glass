@@ -14,7 +14,7 @@ from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 
 from shape import ShapeGen 
 from scene import Scene # aka grid
-from block import GENERIC_COLORS, Block
+from block import GENERIC_COLORS, Block, block_equals
 from grid import Grid
 
 import numpy as np
@@ -34,10 +34,9 @@ def gen_cell(noise, grid):
     return (uniform(grid.H),
             uniform(grid.W))
 
-SG = ShapeGen()
 def gen_shape(noise, side):
-    global SG
     internal_assert(1<=side<=6, 'requested shape sidelength illegal')
+    SG = ShapeGen()
     SG.set_side(side)
     shape = SG.search() 
     return shape
@@ -50,11 +49,12 @@ def amax(items, score_func):
     internal_assert(len(best_items)==1, 'argmax fails uniqueness')
     return best_items[0]
 
-def render_blocks(grid, blocks, nb_tries=5):
+def render_blocks(grid, blocks, nb_tries=50):
     for _ in range(nb_tries):
         new_grid = grid.copy()
         success = new_grid.render_blocks(blocks)
         if success is not None: return new_grid
+    print(blocks)
     raise InternalError('unable to render blocks')
 
 def render_block_in_corner(grid, block):
@@ -63,25 +63,34 @@ def render_block_in_corner(grid, block):
     return G
 
 def gen_blocks(nb, block_gen, noise):
+    internal_assert(nb<=6, 'too many blocks')
     blocks = [block_gen(noise) for _ in range(nb)]
-    internal_assert(len(blocks)<=6, 'too many blocks')
     return blocks
 
 def blank_grid(height, width):
     internal_assert(1<=height<=30 and 1<=width<=30, 'illegal grid shape' )
     return Grid(height, width)
 
+def uniq_blocks(blocks):
+    uniq = []
+    for i in range(len(blocks)):
+        for j in range(i):
+            if block_equals(blocks[i], blocks[j]): break
+        else:
+            uniq.append(blocks[i])
+    return uniq
+
 impls_by_nm = {
     # basic samplers:
     'gen_some': lambda noise: uniform([1,2,3]),
     'gen_svrl': lambda noise: uniform([3,4,5]),
-    'gen_many': lambda noise: uniform(range(6,20)),
+    'gen_many': lambda noise: uniform(range(15,20)),
     'gen_cell': lambda noise: lambda grid: gen_cell(noise, grid),
     'gray'    : 'A',
     'gen_rain': lambda noise: uniform(GENERIC_COLORS),
     'gen_shap': lambda noise: lambda side: gen_shape(noise, side),
     # product types:
-    'blok_cons': lambda color: lambda shape: Block(shape, color),
+    'blok_cons': lambda color: lambda shape: Block(shape=shape, color=color),
     'shap_blok': lambda block: block.shape,
     'colr_blok': lambda block: block.color,
     # render a grid:
@@ -105,40 +114,56 @@ impls_by_nm = {
     'width_shap':  lambda shape: shape.shape[1],
     'amax_blocks': lambda blocks: lambda score: amax(blocks, score),
     # list helpers:
+    'sing_blks': lambda block: [block],
     'gen_blks': (
         lambda nb: lambda block_gen: lambda noise: 
             gen_blocks(nb, block_gen, noise)
     ),
     'cons_blks': lambda blocks: lambda block: blocks+[block],
+    'uniq_blks': lambda blocks: uniq_blocks(blocks),
 }
 
 #=============================================================================#
 #=====  1. LAMBDA EVALUATION  ================================================#
 #=============================================================================#
 
+def concat_multilines(displays):
+    lines = [d.split('\n') for d in displays]
+    heights = [len(ls) for ls in lines] 
+    pre(heights == sorted(heights, reverse=True), '!')
+    return '\n'.join(
+        ' '.join(
+            ls[h] if h<len(ls) else ''
+            for ls in lines
+        )
+        for h in range(max(heights))
+    )
+
+
 if __name__=='__main__':
     from generate_script import get_script
-    while True:
-        while True:
-            print()
-            blocks, get_block, grid, X, Y = get_script()
-            blocks_impl = eval(blocks['pyth'], impls_by_nm)
-            get_block_impl = eval(get_block['pyth'], impls_by_nm)
-            grid_impl = eval(grid['pyth'], impls_by_nm)
-            X_impl = eval(X['pyth'], impls_by_nm)
-            Y_impl = eval(Y['pyth'], impls_by_nm)
-            if ('rndr' in grid['pyth'] and
-                X['text']!=Y['text']): break
+
+    for _ in range(12):
+        pairs = []
+        print()
+        blocks, get_block, X, Y = get_script()
+        blocks_impl = eval(blocks['pyth'], impls_by_nm)
+        get_block_impl = eval(get_block['pyth'], impls_by_nm)
+        X_impl = eval(X['pyth'], impls_by_nm)
+        Y_impl = eval(Y['pyth'], impls_by_nm)
 
         try:
-            noise = None
-            blocks = blocks_impl(noise)
-            block = get_block_impl(blocks)
-            grid = grid_impl(noise)(blocks)(block)
-            X = X_impl(noise)(block)(grid)
-            Y = Y_impl(block)(grid)
-        except InternalError: continue
+            for _ in range(3):
+                noise = None
+                blocks = blocks_impl(noise)
+                block = get_block_impl(blocks)
+                X = X_impl(noise)(blocks)
+                Y = Y_impl(block)
+                pairs.append((X, Y))
+        except InternalError as e:
+            print(e.msg)
+            continue
         break
-    print(str(X))
-    print(str(Y))
 
+    for X, Y in pairs:
+        print(concat_multilines([str(X), str(Y)]))
