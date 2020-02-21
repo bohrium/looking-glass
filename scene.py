@@ -1,7 +1,7 @@
 ''' author: samtenka
     change: 2020-02-16
     create: 2019-02-16
-    descrp: visualize terms
+    descrp:
     to use: 
 '''
 
@@ -11,7 +11,7 @@ from utils import reseed, bernoulli, geometric, uniform # math
 
 import numpy as np
 
-from block import Block
+from shape import ShapeGen
 
 COLORS = 'KBRGYAPOCN'
 SPECIAL_COLORS = 'KA'
@@ -29,12 +29,12 @@ class Scene:
         self.W = W
 
     def sample_blocks(self, nb_blocks, sides=[2,3,4,5], colors=GENERIC_COLORS):
-        B = Block()
+        SG = ShapeGen()
         self.blocks = []
         while len(self.blocks) != nb_blocks:
             side = uniform(sides)
-            B.set_side(side)
-            block = B.search() 
+            SG.set_side(side)
+            block = SG.search() 
             color = uniform(colors)
             for _ in range(5):
                 r, c = uniform(self.H-side), uniform(self.W-side)
@@ -129,12 +129,12 @@ def concat_multilines(displays):
     )
 
 if __name__=='__main__':
-    for _ in range(2):
-        size = 12+geometric(3)
-        print(size)
+    nb_examples = 4
+    for _ in range(nb_examples):
+        size = 12+geometric(1)
         S = Scene(size, size)
-        S.noise(colors=['A'])
-        S.sample_blocks(6)
+        #S.noise(colors=['A'])
+        S.sample_blocks(5)
     
         rays = [] 
         while len(rays) < 2:

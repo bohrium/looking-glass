@@ -70,14 +70,15 @@ class LGType:
         '''
         TODO: add constructor names (fst, snd) for product?
         '''
-        if self.kind=='base': return {([self], [])}
+        if self.kind=='base': return [([self], [])]
         if self.kind=='from':
             return [([self], [])] + [
                 (conseqs, hypoths + [self.arg])
                 for conseqs, hypoths in self.out.conseq_hypoth_pairs()
             ]
         if self.kind=='mset': return [([self], [])]
-        if self.kind=='prod': return [(self.fst.conseqs()+self.snd.conseqs(), [])]
+        #if self.kind=='prod':
+        #    return [(self.fst.conseqs()+self.snd.conseqs(), [])]
 
 #=============================================================================#
 #=====  1. ACTUAL LG TYPES  ==================================================#
@@ -86,10 +87,12 @@ class LGType:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~  1.0 Base Types  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
+tNoise = LGType('base', name='noise')
 tInt   = LGType('base', name='int')
 tCell  = LGType('base', name='cell')
 tDir   = LGType('base', name='dir') 
 tColor = LGType('base', name='color')
+tShape = LGType('base', name='shape')
 tBlock = LGType('base', name='block')
 tGrid  = LGType('base', name='grid')
 
