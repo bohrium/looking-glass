@@ -116,4 +116,147 @@ until no change in Y
 for each direction-color (D, cc, c) triple
     erase color cc from Y
 
+10
+initialize a blank canvas X of shape 11 by 11
+initialize a blank canvas Y of shape 11 by 11
+fill X with gray
+fill Y with gray
+initialize a blank grid G of shape 3 by 3
+associate to each cell of G a 
+    sampled sprite with noise of nonyellow colors and no blanks
+sample a cell PPsource of G
+sample a cell PPtarget of G
+paint the PPtargetth cell of the sprite associated to cell PPsource yellow
+for each cell of G at position (dr, dc) from center
+    paint the corresponding sprite to position (4dr, 4dc) to X 
+    if that cell is PPtarget
+        paint the PPsource sprite to PPtarget at Y
+        remove the gray pixels from that sprite's rendering onto Y
+    else
+        erase the 3x3 block at Y
+
+11
+initialize a blank canvas Z
+sample two distinct cells PPsource PPtarget of Z
+initialize a pen at PPsource
+until pen is at same row as PPtarget
+    drag pen vertically by 1 cell toward PPtarget with yellow
+until pen is at same column as PPtarget
+    drag pen horizontally by 1 cell toward PPtarget with yellow 
+paint PPsource of Z with cyan
+paint PPtarget Z with red
+copy Y from Z
+copy X from Z
+erase all yellow cells from X
+
+12
+initialize a blank canvas Z
+sample a non-red color c
+fill Z with dense c noise
+sample a few rows and columns of Z
+for each:
+    paint that row and column with red
+copy Y from Z
+copy X from Z
+erase all red cells from X 
+
+13
+initialize a blank canvas Z
+sample a non-blue color c
+fill Z with dense c noise
+copy X from Z
+until Y unchanged
+    find upperleftmost 3x3 hole in Y
+    fill that hole with a blue solid object
+
+14
+sample some positive naturals RR all distinct
+sample some naturals CC of same length
+initialize X, Y to blank canvas of same size, at least (max RR, max CC) in shape
+for R,C in RR,CC:
+    initialize pen to (0, C)  
+    until pen at height R
+        drag upward with color gray onto X
+with maximum (R,C):
+    initialize pen to (0, C)  
+    until pen at height R
+        drag upward with color blue onto Y
+with minimum (R,C):
+    initialize pen to (0, C)  
+    until pen at height R
+        drag upward with color red onto Y
+
+15
+initialize X to blank canvas
+sample some rectangles on X, with max volume unique
+sample a color cbdry
+sample a color cnoise
+paint sparse noise of color cnoise onto X 
+for rectangle R:
+    paint R's boundary onto X with color cbrdy
+crop max rectangle's coordinates from X onto Y
+
+16
+sample a few shapes --- N many
+render shapes onto X with color cyan
+initialize Y as NxN blank grid
+paint Y's backslash as cyan
+
+17
+sample a few solid color rectangular blocks
+initialize X, Y to equal big shapes
+for each shape:
+    pack onto bottom of X at position (r, c)
+    pack onto Y at position (r+height of shape, c) 
+
+18
+sample some 3x3 shape-color pairs
+pack onto X
+above one pair on X, draw a gray cell
+render that shape-color pait onto Y
+
+19
+initialize a blank canvas Z
+sample a non-green color c
+fill Z with dense c noise
+sample a few disjoint big rectangles in Z
+for each rectangle:
+    erase rectangle's boundary and interior from Z
+for each rectangle:
+    fill rectangle's interior with green
+copy Y from Z
+copy X from Z
+erase green cells from X
+
+20
+initialize a blank grid Z of shape 7 by 7 
+sample two colors cpetal, ccenter 
+sample a 3x3 shape S without center
+sample a few cells of Z such that centered 3x3 blocks disjoint
+for each cell:
+    paint cell with cpetal to Z
+for each cell:
+    paint S at cell C onto Z with color cpetal 
+    if cell is first:
+        copy X from Z 
+copy Y from Z
+
+21
+initialize blank Z of shape L by L
+sample nondecreasing pairs 0<=a<=b<L
+ensure first a=b and last a=b
+for a,b ith element of that list:
+    initialize pen at (0,i) 
+    until pen at height a
+        drag upward by 1 with color cyan
+    initialize pen at (L-1,i) 
+    until pen at height a-1
+        drag downward by 1 with color red
+copy X from Z
+color all widest rectangles that fit in remaining green
+color all tallest rectangles that fit in remaining green
+copy Y from Z
+
+22
+sample a few point-color pairs with distinct rows
 
