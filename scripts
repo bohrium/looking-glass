@@ -336,3 +336,107 @@ and ortho touches previous
     randomly shift height, no cutoff
     shift col right by i 
     render onto X 
+
+30
+initialize 3x3 grid
+randomly assign colors to 3x3 grid with unique plurality color c
+copy X from 3x3 grid
+initialize Y as 9x9 grid
+for each cell at position (r,c) of color c in X 
+    render X onto Y at position(3r, 3c)
+
+31 
+initialize grid
+sparse purple noise
+sparse blue noise
+render a 2x2 green block
+copy X from Z
+for colored cell (R,C) c above,below,left,right of green block
+    draw c line from (R,C) to green block   
+copy Y from Z
+
+32
+sample n, m at least 2
+generate two distinct nxn shapes shapemore shapeless
+Y <- shapeless 
+initialize grid m x m
+to each cell of grid associate shape shapemore
+to a random cell of grid associate shape shapeless
+render grid with spacing (0,1,clear) onto X 
+
+33
+sample m
+initialize grid m x m
+associate to each grid cell a 3x3 purple sprite
+render grid with spacing (0,1,cyan) to X
+Y is m x m
+for each cell of grid
+    if sprite has at least 2 cells
+        paint corresponding Y cell blue 
+
+34 
+sample 3x3 monochromatic object O
+pack O onto X 
+grid of size 1x2
+associate to both cells of grid the object O 
+render grid onto Y with (0,0,clear)
+
+35
+sample a few columns CC
+sample a few rows RR
+paint top, CC as cyan
+paint left, RR as red
+copy X from Z
+for C in CC
+    initialize pen to top, C
+    until hit border
+        until same row as el of RR 
+            drag down with cyan
+        push pen right by 1  
+        drag pen down by 1 with cyan 
+copy Y from Z
+potentially:
+    rotate X,Y by same amount
+    reflect X,Y by same amount
+
+36
+draw big gray rectangle that rouches top and bottom
+copy X from Z
+copy Y from Z
+sample color c
+sample point PP outside of rectangle and other objecys
+draw PP, c on X
+move PP toward rectangle until touches on Y
+draw PP, gray on Y
+potentially:
+    rotate X,Y by same amount
+
+37
+initialize Z 3x3
+random rainbow noise to Z
+copy X from Z
+reflect along backslash
+copy Y from Z
+
+38
+sample N small
+sample a list of N distinct colors
+Y <- that list (as 1 by N)
+for each row
+    sample N points on that row
+    color those points by colors of lists in row
+    until row unchanged:
+    surround each color by same color in row 
+X <- Z
+potentially:
+    rotate X,Y by same amount
+
+39
+sample half column
+render large monochromatic shape with vertical axis symmetry onto Z, no cutoff, at that halfcolumn 
+copy Y from Z
+occlude on left of half column by random solid rectangle
+copy X from Z
+
+potentially:
+    reflect both X,Y by same amount along vertical axis
