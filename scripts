@@ -259,4 +259,80 @@ copy Y from Z
 
 22
 sample a few point-color pairs with distinct rows
+render all point-color pairs
+copy X from Z
+for each point-color pair
+    initialize pen at point
+    until off border
+        drag pen right with color c
+        drag pen right with color g
+copy Y from Z
 
+23
+sample a few shapes 
+for each shape
+    color c = cyan if shape has hole else blue
+    pack shape onto Z with color c 
+copy Y from Z
+copy X from Z
+replace cyan by blue in X
+
+24
+sample a small number N
+pack N 2x2 blue squares onto X
+pack a few 2x2 red squares onto X
+pack a few 1x1 blue squares onto X
+pack a few 1x1 red squares onto X
+let Y be 1 by 5
+initialize pen at Y's (0,0)
+until pen's column is N
+drag pen right with color blue
+
+25
+sample a few points of Z, with no row or column having 3 or more points
+render those points blue on Z
+copy X from Z 
+for each row or column
+    if row or column has two points
+        fill between with cyan
+
+26
+sample a point-color Pup cup in upper half 
+sample a point-color Pdown cdown in bottom half 
+draw upper border of Y as cup 
+draw bottom border of Y as cdown
+draw row of Pup of Y as cup 
+draw row of Pdown of Y as cdown
+draw Pcup cup onto X 
+draw Pcdown cdown onto X 
+
+27 
+sample a few objects of volume at least 2
+render onto Y in cyan
+pack a few sprites with plus-occlusions and green centers onto Y, cutoff
+copy X from Y
+replace cyan by green in X
+
+28
+sample two distinct king directions
+sample short list of colors
+sample an index in that list
+make list pointed at that index
+sample a point on X more than len(list) from border
+for each sampled direction:
+    render list in that direction at point
+copy X from Z  
+for each sampled direction: 
+    tile line of direction dir at point p with lists
+copy Y from Z
+
+29 
+sample some shape-color pairs within 3x3
+Y is 3 by sum(widths) 
+for shape of index i:
+    pack leftmost such that above previous on Y
+and ortho touches previous
+    replace intershape touching cells with gray 
+    randomly shift height, no cutoff
+    shift col right by i 
+    render onto X 
