@@ -1,0 +1,119 @@
+0
+initialize a blank canvas Z   
+sample a nonempty subset RR of rows of Z
+sample a subset CC of columns of Z
+for each R in RR
+    sample a pair ctrue, cfalse of distinct colors
+    for each column C
+       paint Z at (R,C) with ctrue if C is in CC else cfalse
+copy Y from Z
+copy X from Z
+erase the rectangle (min RR+1, min CC+1), (H, W) from X
+
+1
+initialize a blank canvas X of shape (>=13) by (>=13)
+initialize a blank canvas Y of shape 9 by 9
+fill Y with gray
+for each king direction (dR, dC):
+    sample a color c
+    let P be the 3x3 plus sign of color c
+    initialize a 3x3 sprite S 
+    fill S with gray
+    locate the cell (r, c) of S (dR, dC) away from S's center
+    paint P with its center on (r,c) onto S, clipping at borders
+    paint P onto the (3dR, 3dC) cell from Y's center
+    pack and paint P onto X
+
+2
+initialize a blank canvas X of shape 3 by 3
+initialize a blank canvas Y of shape 3 by 3
+paint X with random colors
+fill Y with the majority color
+
+3 
+initialize a blank canvas Z
+copy Y from Z
+copy X from Z
+sample a few positions PP in Z's grid such that 5x5 sprites therein centered do not overlap or overflow 
+sample distinct colors corth, cdiag
+let P be the 3x3 plus sign of color corth
+paint P's center pixel with cdiag
+let S by the 5x5 plus sign of color corth
+paint S with the 5x5 times sign of color cdiag
+for each PP 
+    paint P at PP onto X
+    paint S at PP onto Y
+
+4 
+initialize a blank canvas Z
+sample a cell PP of Z
+initialize pen at cell PP of Z
+repeat until hit border
+    drag up by 2 with color gray
+    drag right 2 with color gray
+initialize pen at cell PP of Z
+repeat until hit border
+    drag down by 2 with color gray
+    drag left 2 with color gray
+paint the cell PP of Z with cyan
+copy Y from Z
+copy X from Z
+erase all gray cells from X
+
+5 
+initialize a blank canvas Z 
+sample a rectangle from Z of shape at least 3 by 3
+draw rectangle's border onto Z in gray
+draw rectangle's interior onto Z in cyan
+sample an ortho direction DD
+sample a cell PP of the rectangle's DD side that is not a corner
+initialize pen at cell PP of Z
+repeat until hit border
+    drag in direction DD with color cyan   
+copy Y from Z
+copy X from Z
+erase all cyan cells from X
+
+6
+initialize a blank canvas X of shape 3 by 3
+initialize a blank canvas Y of shape 3 by 3
+paint X with random colors
+for each row R of X
+    if row R of X is monochromatic
+        paint row R of Y with gray
+
+7
+initialize a blank canvas X
+initialize a blank canvas Y of same shape
+sample a few shapes with unique shape of minimal volume
+for each shape S
+    pack S onto X with color cyan
+    pack S onto Y with color blue if nonminimal else red
+
+8
+initialize a blank canvas X
+sample a few blocks, each monochromatic, with well-defined plurality
+for each block B
+    pack B onto X
+set Y to the plurality block
+
+9 
+initialize a blank canvas X
+initialize a blank canvas Y of same shape
+sample a subset S of king directions
+to each direction in S associate two colors so that all are distinct
+for each direction-color (D, c, cc) triple
+    paint the D corner of X with C
+copy Y from X
+sample a color cc distinct from any previous one
+until no change in Y
+    for each direction-color (D, c, cc) triple
+        surround colors c with color cc on Y 
+        (if overwrite happened, erase cell)
+    for each direction-color (D, cc, c) triple
+        surround colors cc with color c on Y
+        (if overwrite happened, erase cell)
+for each direction-color (D, cc, c) triple
+    erase color cc from Y
+
+
