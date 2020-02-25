@@ -74,6 +74,24 @@ def sample_xy_003():
         y.paint_sprite(monochrome(large_times, color_b), cell)
     return x.colors, y.colors
 
+def sample_xy_006():
+    side = 3 + geometric(0.1) 
+    x = Grid(H=side, W=side)
+    y = Grid(H=side, W=side)
+    color_a = uniform(GENERIC_COLORS)
+    color_b = uniform(GENERIC_COLORS)
+    for r in range(side):
+        if bernoulli(0.5):
+            color = uniform(GENERIC_COLORS)
+            assert len({color, color_a, color_b})==3
+            x.colors[r,:] = np.array([color]*3)
+            y.colors[r,:] = np.array(['A']*3)
+        else:
+            colors = [uniform([color_a, color_b]) for c in range(side)] 
+            assert len(set(colors))!=1
+            x.colors[r,:] = np.array(colors)
+    return x.colors, y.colors
+
 def tenacious_gen(f, nb_iters=100):
     for _ in range(nb_iters):
         try:
@@ -83,6 +101,6 @@ def tenacious_gen(f, nb_iters=100):
 
 if __name__=='__main__':
     while True:
-        x,y = tenacious_gen(sample_xy_003)
+        x,y = tenacious_gen(sample_xy_006)
         print(CC+str_from_grids([x, y], render_color))
         input('next?')
