@@ -5,6 +5,7 @@
     to use:
 '''
 
+from utils import InternalError, internal_assert        # maybe
 from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
 from utils import reseed, bernoulli, geometric, uniform # math
@@ -22,13 +23,6 @@ import numpy as np
 #=============================================================================#
 #=====  0. PRIMITIVES  =======================================================#
 #=============================================================================#
-
-class InternalError(Exception):
-    def __init__(self, msg):
-        self.msg = msg
-def internal_assert(condition, message):
-    if not condition:
-        raise InternalError(message)
 
 def gen_cell(noise, grid):
     return (uniform(grid.H),

@@ -16,6 +16,14 @@ import numpy as np
 
 ARC_path = '../projects/ARC' 
 
+class InternalError(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+def internal_assert(condition, message):
+    if not condition:
+        raise InternalError(message)
+
 #=============================================================================#
 #=====  0. ANSI CONTROL FOR RICH OUTPUT TEXT =================================#
 #=============================================================================#
