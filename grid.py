@@ -30,35 +30,35 @@ class Grid:
         G.occupd = np.copy(self.occupd)
         return G
 
-    #def fill(self, color, cell):
-    #    offsets = [
-    #        (dr, dc) for dr in range(-1, 2) for dc in range(-1, 2)
-    #        if abs(dr)+abs(dc)==1
-    #    ] 
-    #    points = set([
-    #        (r, c) for r in range(self.H) for c in range(self.W)
-    #        if self.colors[r,c]==self.colors[cell[0], cell[1]] 
-    #    ]) 
+    def fill(self, color, cell):
+        offsets = [
+            (dr, dc) for dr in range(-1, 2) for dc in range(-1, 2)
+            if abs(dr)+abs(dc)==1
+        ] 
+        points = set([
+            (r, c) for r in range(self.H) for c in range(self.W)
+            if self.colors[r,c]==self.colors[cell[0], cell[1]] 
+        ]) 
 
-    #    # Breadth First Search:
-    #    seen = set([cell])
-    #    frontier = seen # always a subset of seen
-    #    while frontier:
-    #        for r,c in frontier:
-    #            self.colors[r,c] = color
-    #        neighbors = set([
-    #            (r+dr, c+dc) for (r, c) in frontier for (dr, dc) in offsets
-    #        ]).intersection(points)
-    #        frontier = neighbors.difference(seen)
-    #        seen.update(frontier)
-    #    return self
+        # Breadth First Search:
+        seen = set([cell])
+        frontier = seen # always a subset of seen
+        while frontier:
+            for r,c in frontier:
+                self.colors[r,c] = color
+            neighbors = set([
+                (r+dr, c+dc) for (r, c) in frontier for (dr, dc) in offsets
+            ]).intersection(points)
+            frontier = neighbors.difference(seen)
+            seen.update(frontier)
+        return self
 
-    #def noise(self, colors):
-    #    for r in range(self.H):
-    #        for c in range(self.W):
-    #            if bernoulli(0.95): continue
-    #            self.colors[r,c] = uniform(colors) 
-    #    return self
+    def noise(self, colors, density=0.05):
+        for r in range(self.H):
+            for c in range(self.W):
+                if not bernoulli(density): continue
+                self.colors[r,c] = uniform(colors) 
+        return self
 
     def paint_sprite(self, sprite, cell):
         r, c = cell
