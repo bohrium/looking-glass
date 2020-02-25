@@ -60,16 +60,23 @@ def gen_shape(noise, side, crop=True):
     return shape
 
 def monochrome(shape, color):
-    return np.array([
+    G = Grid(H=shape.shape[0], W=shape.shape[1])
+    G.colors = np.array([
         [color if el else 'K' for el in row]
         for row in shape
     ]) 
+    return G
 
-def replace_color(grid, color_source, color_target):
-    return np.array([
-        [color_target if el==color_source else el for el in row]
-        for row in grid  
-    ]) 
+def volume(shape):
+    return np.sum(shape)
+def shape_eq(lhs, rhs):
+    return (
+        lhs.shape==rhs.shape
+        and np.sum(np.abs(lhs-rhs))==0
+    )
+
+def displace(cell, offset):
+    return tuple(cell[i]+offset[i] for i in range(2))
 
 def sample_xy_003():
     side = 11 + geometric(0.5)
@@ -83,10 +90,10 @@ def sample_xy_003():
     for _ in range(nb_objs):
         cell = y.reserve_shape(large_square, spacious=True) 
         x.paint_sprite(monochrome(small_plus, color_a), cell)
-        x.paint_sprite(monochrome([[1]], color_b), cell)
+        x.paint_cell(cell, color_b)
         y.paint_sprite(monochrome(large_plus, color_a), cell)
         y.paint_sprite(monochrome(large_times, color_b), cell)
-    return x.colors, y.colors
+    return x, y
 
 def sample_xy_006():
     side = 3 + geometric(0.1) 
@@ -104,7 +111,7 @@ def sample_xy_006():
             colors = [uniform([color_a, color_b]) for c in range(side)] 
             internal_assert(len(set(colors))!=1, 'need polychromatic row') 
             x.colors[r,:] = np.array(colors)
-    return x.colors, y.colors
+    return x, y
 
 def sample_xy_007():
     side = 10 + geometric(0.1) 
@@ -112,17 +119,17 @@ def sample_xy_007():
     z = Grid(H=side, W=side)
     shape_big = gen_shape(None, side=4)
     shape_small = gen_shape(None, side=4)
-    internal_assert(np.sum(shape_small) < np.sum(shape_big), 'shapes need to differ in size')
+    internal_assert(volume(shape_small) < volume(shape_big), 'shapes need to differ in size')
     for _ in range(nb_objs-1):
         cell = z.reserve_shape(shape_big, spacious=True) 
         z.paint_sprite(monochrome(shape_big, 'B'), cell)
     cell = z.reserve_shape(shape_small, spacious=True) 
     z.paint_sprite(monochrome(shape_small, 'R'), cell)
 
-    y = np.copy(z.colors)
-    x = np.copy(z.colors)
-    x = replace_color(x, 'R', 'C')
-    x = replace_color(x, 'B', 'C')
+    y = z.copy()
+    x = z.copy()
+    x.replace_color('R', 'C')
+    x.replace_color('B', 'C')
     return x, y
 
 def sample_xy_008():
@@ -147,7 +154,7 @@ def sample_xy_008():
             z.paint_sprite(monochrome(shape, color), cell)
         if multiple==max_mult:
             y = monochrome(shape, color)
-    x = np.copy(z.colors)
+    x = z.copy()
     return x, y
 
 def sample_xy_016():
@@ -160,12 +167,14 @@ def sample_xy_016():
     for shape in shapes:
         cell = z.reserve_shape(shape, spacious=True) 
         z.paint_sprite(monochrome(shape, 'C'), cell)
-    x = np.copy(z.colors)
+    x = z.copy()
     
     y = Grid(nb_shapes, nb_shapes)
-    for i in range(nb_shapes):
-        y.colors[i,i]='C'
-    return x, y.colors
+    cell = y.get_border_cell((0,0), (-1,-1))
+    while y.cell_in_bounds(cell): 
+        y.paint_cell(cell, 'C')
+        cell = displace(cell, (1,1))
+    return x, y
 
 def sample_xy_022():
     height = 8 + geometric(1.0) 
@@ -212,7 +221,7 @@ def sample_xy_023():
         z.paint_sprite(monochrome(shape, color), cell)
     internal_assert('C' in colors, 'need at least one cyan hole')
 
-    y = np.copy(z.colors)
+    y = z.copy()
     x = replace_color(y, 'C', 'B')
     return x,y
 
@@ -224,19 +233,19 @@ def sample_xy_032():
     color = uniform(GENERIC_COLORS)
     shape_a = gen_shape(None, side=2, crop=False)
     shape_b = gen_shape(None, side=2, crop=False)
-    internal_assert(np.sum(np.abs(shape_a-shape_b))!=0, 'shapes should be distinct')
+    internal_assert(not shape_eq(shape_a, shape_b), 'shapes should be distinct')
 
     z.paint_sprite(monochrome(shape_a, color), (1,1))
     z.paint_sprite(monochrome(shape_a, color), (1,4))
     z.paint_sprite(monochrome(shape_a, color), (4,1))
     z.paint_sprite(monochrome(shape_b, color), (4,4))
 
-    x = z.colors
+    x = z.copy()
     y = monochrome(shape_b, color)
 
     rotations = uniform(4)
-    x = np.rot90(x, rotations)
-    y = np.rot90(y, rotations)
+    x.rotate(rotations)
+    x.rotate(rotations)
     return x,y
 
 def sample_xy_034():
@@ -246,13 +255,13 @@ def sample_xy_034():
     color = uniform(GENERIC_COLORS)
     cell = z.reserve_shape(shape)
     z.paint_sprite(monochrome(shape, color), cell)
-    x = z.colors
+    x = z.copy()
 
     h, w = shape.shape
     y = Grid(H=h, W=2*w)
     y.paint_sprite(monochrome(shape, color), (h//2,w//2))
     y.paint_sprite(monochrome(shape, color), (h//2,w+w//2))
-    return x,y.colors
+    return x,y
 
 def sample_xy_037():
     side = 3 + geometric(0.1)
@@ -261,8 +270,9 @@ def sample_xy_037():
     z.noise(uniform(GENERIC_COLORS), density=0.5)
     z.noise(uniform(GENERIC_COLORS), density=0.5)
     z.noise(uniform(GENERIC_COLORS), density=0.5)
-    x = z.colors
-    y = np.transpose(z.colors)
+    x = z.copy()
+    z.reflect((1,1))
+    y = z.copy()
     return x,y
 
 def tenacious_gen(f, nb_iters=100):
@@ -275,5 +285,5 @@ def tenacious_gen(f, nb_iters=100):
 if __name__=='__main__':
     while True:
         x,y = tenacious_gen(sample_xy_037)
-        print(CC+str_from_grids([x, y], render_color))
+        print(CC+str_from_grids([x.colors, y.colors], render_color))
         input('next?')

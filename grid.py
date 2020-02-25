@@ -24,11 +24,49 @@ class Grid:
         self.H = H 
         self.W = W
 
+    def get_border_cell(self, cell, offset):
+        internal_assert(self.cell_in_bounds(cell), 'ray needs to start inside grid')
+        while True:
+            new_cell = tuple(cell[0]+offset[i] for i in range(2))
+            if not self.cell_in_bounds(new_cell):
+                return cell
+            cell = new_cell
+
     def copy(self):
         G = Grid(self.H, self.W)
         G.colors = np.copy(self.colors)
         G.occupd = np.copy(self.occupd)
         return G
+
+    def rotate(self, rotations):
+        self.colors = np.rot90(self.colors, rotations)
+        self.occupd = np.rot90(self.occupd, rotations)
+        if rotations%2:
+            self.H, self.W = self.W, self.H
+
+    def reflect(self, axis_as_offset):
+        rr,cc = axis_as_offset
+        internal_assert(
+            rr*rr+cc*cc in [1,2],
+            'do not know how to reflect across this axis'
+        )
+        if rr*rr+cc*cc == 1: # orthogonal flip
+            transform = lambda arr: arr[::-1,:] if rr else arr[:,::-1]
+        else: # diagonal flip
+            transform = (
+                lambda arr:
+                np.transpose(arr) if rr*cc==1 else np.transpose(arr[::-1,:])[::-1,:]
+            )
+            self.H, self.W = self.W, self.H
+
+        self.colors = transform(self.colors)
+        self.occupd = transform(self.occupd)
+
+    def replace_color(self, color_source, color_target):
+        self.colors = np.array([
+            [color_target if el==color_source else el for el in row]
+            for row in self.colors
+        ]) 
 
     def fill(self, color, cell):
         offsets = [
@@ -60,16 +98,22 @@ class Grid:
                 self.colors[r,c] = uniform(colors) 
         return self
 
+    def paint_cell(self, cell, color):
+        if not self.cell_in_bounds(cell):
+            return
+        r, c = cell
+        self.colors[r, c] = color
+
     def paint_sprite(self, sprite, cell):
         r, c = cell
-        h, w = sprite.shape[0], sprite.shape[1]
+        h, w = sprite.colors.shape[0], sprite.colors.shape[1]
         for rr in range(h): 
             if not (0<=r+rr-h//2<self.H): continue
             for cc in range(w): 
                 if not (0<=c+cc-w//2<self.W): continue
-                color = sprite[rr, cc]
+                color = sprite.colors[rr, cc]
                 if color=='K': continue
-                self.colors[r+rr-h//2, c+cc-w//2] = sprite[rr, cc]
+                self.colors[r+rr-h//2, c+cc-w//2] = color
 
     def reserve_shape(self, shape, nb_tries=5, spacious=False):
         h, w = shape.shape
@@ -114,6 +158,10 @@ class Grid:
     #def render_ray(self, cells, color):
     #    for rr,cc in cells:
     #        self.colors[rr,cc] = color
+
+    def cell_in_bounds(self, cell):
+        r, c = cell
+        return (0<=r<self.H and 0<=c<self.W)
 
     def shape_in_bounds(self, arr, r, c):
         h, w = arr.shape

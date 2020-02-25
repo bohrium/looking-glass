@@ -42,8 +42,9 @@ def str_from_grids(grids, render=render_number):
     return '\n'.join(lines)
 
 if __name__=='__main__':
+    HARDNESS = 1
     for i in range(50):
-        if get_hardness(i)!=0: continue
+        if get_hardness(i)!=HARDNESS: continue
         print(CC + 'task @O {}@D '.format(i))
 
         total_width = 0
