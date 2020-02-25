@@ -85,6 +85,7 @@ impls_by_nm = {
     'gen_some': lambda noise: uniform([1,2,3]),
     'gen_svrl': lambda noise: uniform([3,4,5]),
     'gen_many': lambda noise: uniform(range(15,20)),
+    'gen_crnr': (0, 0),
     'gen_cell': lambda noise: lambda grid: gen_cell(noise, grid),
     'gray'    : 'A',
     'gen_rain': lambda noise: uniform(GENERIC_COLORS),
@@ -127,13 +128,14 @@ impls_by_nm = {
 #=====  1. LAMBDA EVALUATION  ================================================#
 #=============================================================================#
 
-def concat_multilines(displays):
+def concat_multilines(displays, spacing=None):
     lines = [d.split('\n') for d in displays]
     heights = [len(ls) for ls in lines] 
-    pre(heights == sorted(heights, reverse=True), '!')
+    pre(spacing is not None or
+        heights == sorted(heights, reverse=True), 'spacing undefined')
     return '\n'.join(
         ' '.join(
-            ls[h] if h<len(ls) else ''
+            ls[h] if h<len(ls) else ('' if spacing is None else ' '*spacing)
             for ls in lines
         )
         for h in range(max(heights))
@@ -166,4 +168,4 @@ if __name__=='__main__':
         break
 
     for X, Y in pairs:
-        print(concat_multilines([str(X), str(Y)]))
+        print(concat_multilines([str(X), str(Y)], spacing=25))

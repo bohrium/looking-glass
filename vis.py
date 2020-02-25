@@ -12,7 +12,7 @@ from utils import CC, pre                       # ansi
 from utils import secs_endured, megs_alloced    # profiling
 from utils import reseed, bernoulli, geometric  # math
 
-from sampler import get_grids
+from sampler import get_grids, get_hardness
 
 colors = 'KBRGYAPOCN'
 render_color = (
@@ -20,10 +20,11 @@ render_color = (
         '@{} \u2588\u2588@D '.format(c)
         if c!='K' else '@D  \u00b7@D '
 )
+render_number = (lambda n: render_color(colors[n]))
 
-def str_from_grids(grids): 
+def str_from_grids(grids, render=render_number): 
     ''' Return a colorizable string given a list of (potentially non-uniformly
-        shaped) grids of numbers.
+        shaped) grids of numbers or of colors.
     '''
     heights, widths = ([g.shape[i] for g in grids] for i in range(2))
 
@@ -32,7 +33,7 @@ def str_from_grids(grids):
         lines[0]   += ' {} '.format('_'*2*W)                    # top
         for r in range(H):
             lines[1+r] += '|' + ''.join(                        # content
-                render_color(colors[g[r,c]])
+                render(g[r,c])
                 for c in range(W)
             ) + '|'
         lines[1+H] += '`{}`'.format('`'*2*W)                    # bottom
@@ -42,11 +43,12 @@ def str_from_grids(grids):
 
 if __name__=='__main__':
     for i in range(50):
+        if get_hardness(i)!=0: continue
         print(CC + 'task @O {}@D '.format(i))
 
         total_width = 0
         grids = [] 
-        for x, y in get_grids(i, 'train'):
+        for x, y in get_grids(i, 'train')+get_grids(i, 'test'):
             grids += [x, y, np.zeros((0,0))]
             total_width += 2*x.shape[1]+2 + 2*y.shape[1]+2
             if total_width>=60: 

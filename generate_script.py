@@ -38,6 +38,7 @@ sigs_by_nm = {
     'gen_svrl': tInt.frm(tNoise),                      # [3,4,5]
     #'gen_many': tInt.frm(tNoise),                      # [15...30] 
     'gen_cell': tCell.frm(tGrid).frm(tNoise),          # uniform cell
+    'gen_crnr': tCell,                                 # upper left cell
     'gray'    : tColor,                                # 'A'
     'gen_rain': tColor.frm(tNoise),                    # GENERIC_COLORS
     'gen_shap': tShape.frm(tInt).frm(tNoise),          # get random shape 
@@ -78,9 +79,9 @@ def construct(goal, resources):
     if verbose:
         print('analyzing {}'.format(str(goal)))
 
-    if bernoulli(1e-4):
+    if bernoulli(1e-5):
+        # random timeout
         return
-        #pre(False, 'timeout')
 
     if bernoulli(0.1): # split
         split = uniform([
@@ -93,7 +94,6 @@ def construct(goal, resources):
         resources[var_nm] = split
 
         body = construct(goal, resources)
-        #return '(({}->{})({}))'.format(var_nm, body, arg)
         return {
             'text':'{}(({}->{})({}))'.format(var_nm, body['text'], arg['text']),
             'pyth': '(lambda {}: {})({})'.format(var_nm, body['pyth'], arg['pyth'])
@@ -132,6 +132,7 @@ def construct(goal, resources):
                 'pyth': applied, 
             }
         else:
+            # no match found
             return
 
 def tenacious_construct(goal, add_resources={}):
@@ -156,16 +157,15 @@ def tenacious_construct(goal, add_resources={}):
 def get_script(): 
     blocks  = tenacious_construct(tBlock.s(), {'noise':tNoise})
     getblock= tenacious_construct(tBlock,     {'blocks':tBlock.s()})
+    Y       = tenacious_construct(tGrid,      {'block':tBlock})
     blocks  ['pyth'] = 'lambda noise: {}'.format(blocks  ['pyth'])
     getblock['pyth'] = 'lambda blocks: {}'.format(getblock['pyth'])
+    Y       ['pyth'] = 'lambda block: {}'.format(Y['pyth'])
 
     X = {'pyth':'', 'text':''}
-    Y = {'pyth':'', 'text':''}
 
     X['pyth'] = 'lambda noise: lambda blocks: rndr_blks(noise)(blnk_grd(10)(10))(blocks)'
     X['text'] = '(rndr_blks noise (blnk_grd 10 10) blocks)'
-    Y['pyth'] = 'lambda block : rndr_blk (blnk_grd(height_shap(shap_blok(block)))(width_shap(shap_blok(block))))(block)'
-    Y['text'] = '(rndr_blk (blnk_grd (height_shap (shap_blok block)) (width_shap (shap_blok block))) block)'
 
     print(str(CC+'@O blocks = @P '), blocks  ['text'])
     print(str(CC+'@O block  = @P '), getblock['text'] + ' block')
@@ -176,11 +176,6 @@ def get_script():
 
 if __name__=='__main__':
     get_script()
-
-
-
-
-
 
 #    #X       = tenacious_construct(tGrid,      {'noise':tNoise, 'blocks':tBlock.s(),                })
 #    #Y       = tenacious_construct(tGrid,      {                                     'block':tBlock,})

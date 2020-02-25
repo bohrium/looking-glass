@@ -1,5 +1,5 @@
 ''' author: samtenka
-    change: 2020-02-16
+    change: 2020-02-23
     create: 2019-06-12
     descrp: helpers for ansi commands, resource profiling, and math
     to use: import:
@@ -13,6 +13,8 @@ import time
 import sys
 import random
 import numpy as np
+
+ARC_path = '../projects/ARC' 
 
 #=============================================================================#
 #=====  0. ANSI CONTROL FOR RICH OUTPUT TEXT =================================#

@@ -76,10 +76,39 @@ class Grid:
             else: return None
         return self
 
+    def paint_sprite(self, sprite, cell):
+        r, c = cell
+        h, w = sprite.shape[0], sprite.shape[1]
+        for rr in range(h): 
+            if not (0<=r+rr-h//2<self.H): continue
+            for cc in range(w): 
+                if not (0<=c+cc-w//2<self.W): continue
+                color = sprite[rr, cc]
+                if color=='K': continue
+                self.colors[r+rr-h//2, c+cc-w//2] = sprite[rr, cc]
+
+    def reserve_shape(self, shape, nb_tries_per_block=5):
+        h, w = shape.shape
+        if self.H<h or self.W<w: return None
+        for _ in range(nb_tries_per_block):
+            r, c = uniform(range(h//2,self.H-h//2)), uniform(range(w//2,self.W-w//2))
+            if not self.shape_in_bounds(shape, r, c): continue
+            if self.shape_touches(shape, r, c): continue
+            for dr in range(h):
+                for dc in range(w):
+                    if not shape[dr,dc]: continue
+                    if not (0<=r+dr-h//2<self.H and 0<=c+dc-w//2<self.W): continue
+                    rr, cc = r+dr-h//2, c+dc-w//2
+                    self.occupd[rr,cc] = 1
+            return r,c
+
     def sample_occupd(self):
         while True:
             r, c = uniform(self.H), uniform(self.W) 
             if self.occupd[r,c]: return r,c
+
+    def sample_cell(self):
+        return uniform(self.H), uniform(self.W) 
 
     def get_ray(self, r, c, dr, dc):
         cells = []
@@ -94,22 +123,22 @@ class Grid:
         for rr,cc in cells:
             self.colors[rr,cc] = color
 
-    def block_in_bounds(self, arr, r, c):
-        block_h, block_w = arr.shape 
-        for dr in range(block_h):
-            for dc in range(block_w):
+    def shape_in_bounds(self, arr, r, c):
+        h, w = arr.shape
+        for dr in range(h):
+            for dc in range(w):
                 if not arr[dr,dc]: continue
-                if not (0<=r+dr<self.H and 0<=c+dc<self.W):
+                if not (0<=r+dr-h//2<self.H and 0<=c+dc-w//2<self.W):
                     return False
         return True
 
-    def block_touches(self, arr, r, c): 
-        block_h, block_w = arr.shape 
-        for dr in range(block_h):
-            for dc in range(block_w):
+    def shape_touches(self, arr, r, c): 
+        h, w = arr.shape
+        for dr in range(h):
+            for dc in range(w):
                 if not arr[dr,dc]: continue
-                if not (0<=r+dr<self.H and 0<=c+dc<self.W): continue
-                if self.weakoc[r+dr, c+dc]:
+                if not (0<=r+dr-h//2<self.H and 0<=c+dc-w//2<self.W): continue
+                if self.occupd[r+dr-h//2, c+dc-w//2]:
                     return True
         return False
 
