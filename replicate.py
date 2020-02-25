@@ -88,7 +88,7 @@ def sample_xy_003():
     internal_assert(color_a!=color_b, 'need distinct colors') 
 
     for _ in range(nb_objs):
-        cell = y.reserve_shape(large_square, spacious=True) 
+        cell = y.reserve_shape(large_square, (0,0), spacious=True) 
         x.paint_sprite(monochrome(small_plus, color_a), cell)
         x.paint_cell(cell, color_b)
         y.paint_sprite(monochrome(large_plus, color_a), cell)
@@ -105,8 +105,8 @@ def sample_xy_006():
         if bernoulli(0.5):
             color = uniform(GENERIC_COLORS)
             internal_assert(len({color, color_a, color_b})==3, 'need distinct colors') 
-            x.colors[r,:] = np.array([color]*3)
-            y.colors[r,:] = np.array(['A']*3)
+            x.paint_row(r, color)
+            y.paint_row(r, 'A')
         else:
             colors = [uniform([color_a, color_b]) for c in range(side)] 
             internal_assert(len(set(colors))!=1, 'need polychromatic row') 
@@ -121,10 +121,10 @@ def sample_xy_007():
     shape_small = gen_shape(None, side=4)
     internal_assert(volume(shape_small) < volume(shape_big), 'shapes need to differ in size')
     for _ in range(nb_objs-1):
-        cell = z.reserve_shape(shape_big, spacious=True) 
-        z.paint_sprite(monochrome(shape_big, 'B'), cell)
-    cell = z.reserve_shape(shape_small, spacious=True) 
-    z.paint_sprite(monochrome(shape_small, 'R'), cell)
+        cell = z.reserve_shape(shape_big, (0,0), spacious=True) 
+        z.paint_sprite(monochrome(shape_big, 'B'), cell, (0,0))
+    cell = z.reserve_shape(shape_small, (0,0), spacious=True) 
+    z.paint_sprite(monochrome(shape_small, 'R'), cell, (0,0))
 
     y = z.copy()
     x = z.copy()
@@ -150,8 +150,8 @@ def sample_xy_008():
     z = Grid(H=side, W=side)
     for shape, color, multiple in zip(shapes, colors, multiples):
         for _ in range(multiple):
-            cell = z.reserve_shape(shape, spacious=True) 
-            z.paint_sprite(monochrome(shape, color), cell)
+            cell = z.reserve_shape(shape, (0,0), spacious=True) 
+            z.paint_sprite(monochrome(shape, color), cell, (0,0))
         if multiple==max_mult:
             y = monochrome(shape, color)
     x = z.copy()
@@ -165,8 +165,8 @@ def sample_xy_016():
     nb_shapes = 2 + geometric(1.0) 
     shapes = [gen_shape(None, side=2+bernoulli(0.8)+bernoulli(0.2)) for _ in range(nb_shapes)]
     for shape in shapes:
-        cell = z.reserve_shape(shape, spacious=True) 
-        z.paint_sprite(monochrome(shape, 'C'), cell)
+        cell = z.reserve_shape(shape, (0,0), spacious=True) 
+        z.paint_sprite(monochrome(shape, 'C'), cell, (0,0))
     x = z.copy()
     
     y = Grid(nb_shapes, nb_shapes)
@@ -188,18 +188,16 @@ def sample_xy_022():
 
     for cell, color in zip(cells, colors):
         z.colors[cell] = color
-    x = np.copy(z.colors)
+    x = z.copy()
 
-    for (r,c), color in zip(cells, colors):
-        while c<width:
-            if c>=width: break
-            z.colors[r,c] = color
-            c = c+1    
-            if c>=width: break
-            z.colors[r,c] = 'A'
-            c = c+1
-    y = z.colors
-
+    for cell, color in zip(cells, colors):
+        tile = Grid(H=1,W=2)
+        tile.fill('A', (0,0))
+        tile.paint_cell((0,0), color)
+        while z.cell_in_bounds(cell):
+            z.paint_sprite(tile, cell, sprite_cell=(0,0))
+            cell = displace(cell, (0,2))
+    y = z.copy()
     return x, y
 
 def sample_xy_023():
@@ -213,12 +211,12 @@ def sample_xy_023():
     for _ in range(nb_objs):
         side = 3+geometric(1.0)
         shape = gen_shape(None, side, crop=False)
-        cell = z.reserve_shape(shape, spacious=True)
+        cell = z.reserve_shape(shape, (0,0), spacious=True)
         SG = ShapeGen()
         SG.side=side
         color = 'C' if not SG.check_top_req(shape, 'simpl') else 'B'
         colors.append(color)
-        z.paint_sprite(monochrome(shape, color), cell)
+        z.paint_sprite(monochrome(shape, color), cell, (0,0))
     internal_assert('C' in colors, 'need at least one cyan hole')
 
     y = z.copy()
@@ -235,10 +233,10 @@ def sample_xy_032():
     shape_b = gen_shape(None, side=2, crop=False)
     internal_assert(not shape_eq(shape_a, shape_b), 'shapes should be distinct')
 
-    z.paint_sprite(monochrome(shape_a, color), (1,1))
-    z.paint_sprite(monochrome(shape_a, color), (1,4))
-    z.paint_sprite(monochrome(shape_a, color), (4,1))
-    z.paint_sprite(monochrome(shape_b, color), (4,4))
+    z.paint_sprite(monochrome(shape_a, color), (1,1), (0,0))
+    z.paint_sprite(monochrome(shape_a, color), (1,4), (0,0))
+    z.paint_sprite(monochrome(shape_a, color), (4,1), (0,0))
+    z.paint_sprite(monochrome(shape_b, color), (4,4), (0,0))
 
     x = z.copy()
     y = monochrome(shape_b, color)
@@ -253,14 +251,16 @@ def sample_xy_034():
     z = Grid(H=side, W=side)
     shape = gen_shape(None, side=3)  
     color = uniform(GENERIC_COLORS)
-    cell = z.reserve_shape(shape)
-    z.paint_sprite(monochrome(shape, color), cell)
+    cell = z.reserve_shape(shape, (0,0))
+    z.paint_sprite(monochrome(shape, color), cell, (0,0))
     x = z.copy()
 
     h, w = shape.shape
     y = Grid(H=h, W=2*w)
-    y.paint_sprite(monochrome(shape, color), (h//2,w//2))
-    y.paint_sprite(monochrome(shape, color), (h//2,w+w//2))
+    cell = (0,0)
+    while y.cell_in_bounds(cell):
+        y.paint_sprite(monochrome(shape, color), cell, (0,0))
+        cell = displace(cell, (0,w))
     return x,y
 
 def sample_xy_037():

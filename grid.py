@@ -24,6 +24,8 @@ class Grid:
         self.H = H 
         self.W = W
 
+    def center(self):
+        return (self.H//2, self.W//2)
     def get_border_cell(self, cell, offset):
         internal_assert(self.cell_in_bounds(cell), 'ray needs to start inside grid')
         while True:
@@ -104,31 +106,43 @@ class Grid:
         r, c = cell
         self.colors[r, c] = color
 
-    def paint_sprite(self, sprite, cell):
+    def paint_row(self, row, color):
+        if not self.cell_in_bounds((row,0)):
+            return
+        self.colors[row,:] = color
+
+    def paint_column(self, column, color):
+        if not self.cell_in_bounds((0,column)):
+            return
+        self.colors[:,column] = color
+
+    def paint_sprite(self, sprite, cell, sprite_cell):
         r, c = cell
         h, w = sprite.colors.shape[0], sprite.colors.shape[1]
+        rrr,ccc = sprite_cell
         for rr in range(h): 
-            if not (0<=r+rr-h//2<self.H): continue
+            if not (0<=r+rr-rrr<self.H): continue
             for cc in range(w): 
-                if not (0<=c+cc-w//2<self.W): continue
+                if not (0<=c+cc-ccc<self.W): continue
                 color = sprite.colors[rr, cc]
                 if color=='K': continue
-                self.colors[r+rr-h//2, c+cc-w//2] = color
+                self.colors[r+rr-rrr, c+cc-ccc] = color
 
-    def reserve_shape(self, shape, nb_tries=5, spacious=False):
+    def reserve_shape(self, shape, shape_cell, nb_tries=5, spacious=False):
         h, w = shape.shape
+        rrr,ccc = shape_cell
         internal_assert(h<=self.H and w<=self.W, 'shape too big to reserve')
         for _ in range(nb_tries):
-            r = uniform(range(h//2,self.H-h//2))
-            c = uniform(range(w//2,self.W-w//2))
+            r = uniform(range(rrr,self.H-h+rrr))
+            c = uniform(range(ccc,self.W-w+ccc))
             if not self.shape_in_bounds(shape, r, c): continue
             if self.shape_overlaps_occupied(shape, r, c): continue
             for dr in range(h):
-                rr = r+dr-h//2
+                rr = r+dr-rrr
                 if not (0<=rr<self.H): continue
                 for dc in range(w):
                     if not shape[dr,dc]: continue
-                    cc = c+dc-w//2
+                    cc = c+dc-ccc
                     if not (0<=cc<self.W): continue
                     if spacious:
                         self.occupd[max(0,rr-1):min(rr+2,self.H),
@@ -168,18 +182,18 @@ class Grid:
         for dr in range(h):
             for dc in range(w):
                 if not arr[dr,dc]: continue
-                if not (0<=r+dr-h//2<self.H and 0<=c+dc-w//2<self.W):
+                if not (0<=r+dr<self.H and 0<=c+dc<self.W):
                     return False
         return True
 
     def shape_overlaps_occupied(self, arr, r, c): 
         h, w = arr.shape
         for dr in range(h):
-            if not (0<=r+dr-h//2<self.H): continue
+            if not (0<=r+dr<self.H): continue
             for dc in range(w):
                 if not arr[dr,dc]: continue
-                if not (0<=c+dc-w//2<self.W): continue
-                if self.occupd[r+dr-h//2, c+dc-w//2]:
+                if not (0<=c+dc<self.W): continue
+                if self.occupd[r+dr, c+dc]:
                     return True
         return False
 
