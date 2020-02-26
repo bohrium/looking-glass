@@ -67,6 +67,9 @@ def monochrome(shape, color):
     ]) 
     return G
 
+def center(shape):
+    return (shape.shape[0]//2, shape.shape[1]//2)
+
 def volume(shape):
     return np.sum(shape)
 def shape_eq(lhs, rhs):
@@ -78,7 +81,7 @@ def shape_eq(lhs, rhs):
 def displace(cell, offset):
     return tuple(cell[i]+offset[i] for i in range(2))
 
-def sample_xy_003():
+def sample_003():
     side = 11 + geometric(0.5)
     nb_objs = 2 + geometric(0.5)
     x = Grid(H=side, W=side)
@@ -88,14 +91,14 @@ def sample_xy_003():
     internal_assert(color_a!=color_b, 'need distinct colors') 
 
     for _ in range(nb_objs):
-        cell = y.reserve_shape(large_square, (0,0), spacious=True) 
-        x.paint_sprite(monochrome(small_plus, color_a), cell)
+        cell = y.reserve_shape(large_square, center(large_square), spacious=True) 
+        x.paint_sprite(monochrome(small_plus, color_a), cell, center(small_plus))
         x.paint_cell(cell, color_b)
-        y.paint_sprite(monochrome(large_plus, color_a), cell)
-        y.paint_sprite(monochrome(large_times, color_b), cell)
+        y.paint_sprite(monochrome(large_plus, color_a), cell, center(large_plus))
+        y.paint_sprite(monochrome(large_times, color_b), cell, center(large_times))
     return x, y
 
-def sample_xy_006():
+def sample_006():
     side = 3 + geometric(0.1) 
     x = Grid(H=side, W=side)
     y = Grid(H=side, W=side)
@@ -113,7 +116,7 @@ def sample_xy_006():
             x.colors[r,:] = np.array(colors)
     return x, y
 
-def sample_xy_007():
+def sample_007():
     side = 10 + geometric(0.1) 
     nb_objs = 3 + geometric(0.5) 
     z = Grid(H=side, W=side)
@@ -132,7 +135,7 @@ def sample_xy_007():
     x.replace_color('B', 'C')
     return x, y
 
-def sample_xy_008():
+def sample_008():
     side = 13 + geometric(1.0) 
     nb_shapes = 2 + geometric(0.5) 
     shapes = [gen_shape(None, side=3) for _ in range(nb_shapes)]
@@ -157,7 +160,7 @@ def sample_xy_008():
     x = z.copy()
     return x, y
 
-def sample_xy_016():
+def sample_016():
     height = 8 + geometric(1.5) 
     width = 8 + geometric(1.5) 
     z = Grid(H=height, W=width)
@@ -176,7 +179,7 @@ def sample_xy_016():
         cell = displace(cell, (1,1))
     return x, y
 
-def sample_xy_022():
+def sample_022():
     height = 8 + geometric(1.0) 
     width = 8 + geometric(1.0) 
     z = Grid(H=height, W=width)
@@ -200,7 +203,7 @@ def sample_xy_022():
     y = z.copy()
     return x, y
 
-def sample_xy_023():
+def sample_023():
     height = 12 + geometric(2.0) 
     width = 12 + geometric(2.0) 
     z = Grid(H=height, W=width)
@@ -223,7 +226,7 @@ def sample_xy_023():
     x = replace_color(y, 'C', 'B')
     return x,y
 
-def sample_xy_032():
+def sample_032():
     small_side = 2
     big_side = 2*small_side+1
     z = Grid(H=big_side, W=big_side)
@@ -246,7 +249,7 @@ def sample_xy_032():
     x.rotate(rotations)
     return x,y
 
-def sample_xy_034():
+def sample_034():
     side = 7 + geometric(1.0)
     z = Grid(H=side, W=side)
     shape = gen_shape(None, side=3)  
@@ -263,7 +266,7 @@ def sample_xy_034():
         cell = displace(cell, (0,w))
     return x,y
 
-def sample_xy_037():
+def sample_037():
     side = 3 + geometric(0.1)
     z = Grid(H=side, W=side)
     z.fill('A', (0,0))
@@ -282,8 +285,23 @@ def tenacious_gen(f, nb_iters=100):
         except InternalError:
             continue
 
+routines = [
+    #sample_003,
+    sample_006,
+    #sample_007,
+    #sample_008,
+    #sample_016,
+    #sample_022,
+    #sample_023,
+    #sample_032,
+    #sample_034,
+    #sample_037,
+]
+
 if __name__=='__main__':
+
     while True:
-        x,y = tenacious_gen(sample_xy_037)
-        print(CC+str_from_grids([x.colors, y.colors], render_color))
-        input('next?')
+        for sample in routines:
+            x,y = tenacious_gen(sample)
+            print(CC+str_from_grids([x.colors, y.colors], render_color))
+            input('next?')

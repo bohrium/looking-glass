@@ -32,17 +32,26 @@ class WeightLearner:
         self.types = set() 
         self.atoms = {'root'}
 
-    def observe_tree(self, tree, parent='root', resources=()): 
+    def observe_datapoint(self, head, parent, resources):
+        if head in resources:
+            self.train_set.append(Datapoint('resource', parent, resources))
+        else:
+            self.train_set.append(Datapoint(head, parent, resources))
+            self.atoms.add(head)
+
+    def observe_tree(self, tree, parent='root', resources={}): 
         if type(tree)==type(''):
             self.observe_tree([tree], parent, resources)
         elif type(tree)==type({}):
-            for introd_type, body in tree.items():
-                self.observe_tree(body, 'root', resources+(introd_type,)) 
-                self.types.add(introd_type)
+            for (var_nm, var_type), body in tree.items():
+                self.types.add(var_type)
+                new_resources = {k:v for k,v in resources.items()}
+                new_resources[var_nm] = var_type
+                self.observe_datapoint('root', parent, resources)
+                self.observe_tree(body, 'root', new_resources) 
         else:
             caller, args = tree[0], tree[1:]
-            self.train_set.append(Datapoint(caller, parent, resources))
-            self.atoms.add(caller)
+            self.observe_datapoint(caller, parent, resources)
             for arg in args:
                 self.observe_tree(arg, caller, resources)
 
@@ -71,7 +80,7 @@ class WeightLearner:
         for atom, parent, resources in self.train_set: 
             self.w_unigram[atom] += 1
             self.w_bigram[parent][atom] += 1
-            for r in resources:
+            for r in resources.values():
                 self.w_resource[r][atom] += 1
         self.w_unigram = normalize(self.w_unigram)
         self.w_bigram = {p:normalize(v) for p,v in self.w_bigram.items()}
@@ -87,7 +96,7 @@ class WeightLearner:
             scores[a] *= v**1.0/3
         for a,v in self.w_bigram[parent].items():
             scores[a] *= v**1.0/3
-        for r in resources:
+        for r in resources.values():
             for a,v in self.w_resources[r].items():
                 scores[a] *= v**((1.0/3)/len(resources))
 
@@ -102,11 +111,9 @@ class WeightLearner:
 
 tree = [
     'hello',
-    'moo',
-    {tInt:
+    {('moo', tInt):
         'coon'
     },
-    'goo',
 ]
 
 WL = WeightLearner()
@@ -114,4 +121,5 @@ WL.observe_tree(tree)
 print(WL.types)
 print(WL.atoms)
 WL.compute_weights()
-print(WL.predict('root', ()))
+print(WL.predict('root', {}))
+print(WL.predict('hello', {}))

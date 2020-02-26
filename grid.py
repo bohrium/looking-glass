@@ -135,8 +135,8 @@ class Grid:
         for _ in range(nb_tries):
             r = uniform(range(rrr,self.H-h+rrr))
             c = uniform(range(ccc,self.W-w+ccc))
-            if not self.shape_in_bounds(shape, r, c): continue
-            if self.shape_overlaps_occupied(shape, r, c): continue
+            if not self.shape_in_bounds(shape, r-rrr, c-ccc): continue
+            if self.shape_overlaps_occupied(shape, r-rrr, c-ccc): continue
             for dr in range(h):
                 rr = r+dr-rrr
                 if not (0<=rr<self.H): continue
