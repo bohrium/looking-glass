@@ -1,5 +1,5 @@
 ''' author: samtenka
-    change: 2020-02-16
+    change: 2020-02-25
     create: 2020-02-11
     descrp: a type ontology for the looking glass dsl
     to use: import
@@ -30,9 +30,9 @@ class LGType:
             self.arg  = kwargs['arg'] 
         elif self.kind == 'mset':
             self.child = kwargs['child'] 
-        elif self.kind == 'prod':
-            self.fst = kwargs['fst'] 
-            self.snd = kwargs['snd'] 
+        #elif self.kind == 'prod':
+        #    self.fst = kwargs['fst'] 
+        #    self.snd = kwargs['snd'] 
 
     def frm(self, rhs):
         return LGType('from', out=self, arg=rhs)
@@ -40,8 +40,8 @@ class LGType:
     def s(self):
         return LGType('mset', child=self)
 
-    def times(self, rhs):
-        return LGType('prod', fst=self, snd=rhs)
+    #def times(self, rhs):
+    #    return LGType('prod', fst=self, snd=rhs)
 
     def __eq__(self, rhs):
         return str(self)==str(rhs)
@@ -65,6 +65,9 @@ class LGType:
             return '{{{}}}'.format(str(self.child))
         elif self.kind=='prod':
             return '{} x {}'.format(str(self.fst), str(self.snd))
+
+    def __hash__(self):
+        return hash(str(self))
 
     def conseq_hypoth_pairs(self):
         '''
@@ -111,7 +114,7 @@ tBinop_  = lambda t:   t.frm(t).frm(t)
 #~~~~~~~~~~~~~  1.3 Examples of Display  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 if __name__ == '__main__':
-    print('colored block  \t', tBlock.times(tColor))
+    #print('colored block  \t', tBlock.times(tColor))
     print('blocks         \t', tBlock.s())
     print('decompose block\t', tCell.s().frm(tBlock))
     print('count cells    \t', tCount_(tCell))
