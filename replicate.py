@@ -77,6 +77,8 @@ def shape_eq(lhs, rhs):
         lhs.shape==rhs.shape
         and np.sum(np.abs(lhs-rhs))==0
     )
+def lt(a, b):
+    return a<b
 def eq(a, b):
     return a==b 
 def negate(a):
@@ -88,6 +90,7 @@ def displace(cell, offset):
 def columns(grid): return list(range(grid.W))
 def rows(grid): return list(range(grid.H))
 
+def split_shape(v, f): return f(v)
 def split_int(v, f): return f(v)
 def split_grid(v, f): return f(v)
 def split_color(v, f): return f(v)
@@ -114,6 +117,11 @@ def uniq(collection):
 def moolen(collection):
     return len(collection) 
 
+def silouhette(grid):
+    return np.array([
+        [1 if el!='K' else 0 for el in row]
+        for row in grid.colors
+    ])
 def reserve_shape(grid, shape, cell_in_shape):
     new_grid = grid.copy()
     cell = new_grid.reserve_shape(shape, cell_in_shape, spacious=True)
@@ -211,6 +219,30 @@ def sample_006():
             internal_assert(len(set(colors))!=1, 'need polychromatic row') 
             x.colors[r,:] = np.array(colors)
     return x, y
+
+def sample_007_functional():
+    return (
+    split_int(10+geometric(0.1), lambda side:
+    split_int(2+geometric(0.5), lambda nb_big_objs:
+    split_grid(Grid(side,side), lambda blank:
+    split_shape(gen_shape(None, 4), lambda shape_big:
+    split_shape(gen_shape(None, 4), lambda shape_small:
+    functional_assert(lt(volume(shape_small), volume(shape_big)), 'shapes need to differ in size',
+    split_grid(
+        split_ptdgrid(reserve_shape(blank, shape_small, (0,0)), lambda ptdgrid:
+        paint_sprite(fst(ptdgrid), monochrome(shape_small, 'R'), snd(ptdgrid), (0,0))
+        ), lambda reddened:
+    split_grid(
+        repeat(nb_big_objs, reddened, lambda z:
+            split_ptdgrid(reserve_shape(z, shape_big, (0,0)), lambda ptdgrid:
+            paint_sprite(fst(ptdgrid), monochrome(shape_big, 'B'), snd(ptdgrid), (0,0))
+            )
+        ), lambda y:
+        pair(
+            monochrome(silouhette(y), 'C'),
+            y
+        )
+    )))))))))
 
 def sample_007():
     side = 10 + geometric(0.1) 
@@ -383,8 +415,8 @@ def tenacious_gen(f, nb_iters=100):
 
 routines = [
     #sample_003_functional,
-    sample_006_functional,
-    #sample_007,
+    #sample_006_functional,
+    sample_007_functional,
     #sample_008,
     #sample_016,
     #sample_022,
