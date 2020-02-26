@@ -77,22 +77,42 @@ def shape_eq(lhs, rhs):
         lhs.shape==rhs.shape
         and np.sum(np.abs(lhs-rhs))==0
     )
+def eq(a, b):
+    return a==b 
+def negate(a):
+    return not a
 
 def displace(cell, offset):
     return tuple(cell[i]+offset[i] for i in range(2))
+
+def columns(grid): return list(range(grid.W))
+def rows(grid): return list(range(grid.H))
 
 def split_int(v, f): return f(v)
 def split_grid(v, f): return f(v)
 def split_color(v, f): return f(v)
 def split_cell(v, f): return f(v)
+def split_intcolorpairs(v, f): return f(v)
 def split_ptdgrid(v, f): return f(v)
 def pair(x,y): return (x,y)
 def fst(z): return z[0]
 def snd(z): return z[1]
+def cond(c,t,f):
+    return t if c else f
 def repeat(n,i,f):
     for _ in range(n):
         i = f(i)
     return i
+def fold(collection,i,f):
+    for c in collection:
+        i = f(c)(i)
+    return i
+def moomap(collection, f):
+    return [f(c) for c in collection]
+def uniq(collection):
+    return list(set(collection))
+def moolen(collection):
+    return len(collection) 
 
 def reserve_shape(grid, shape, cell_in_shape):
     new_grid = grid.copy()
@@ -106,6 +126,14 @@ def paint_cell(field, cell_in_field, color):
     new_grid = field.copy()
     new_grid.paint_cell(cell_in_field, color)
     return new_grid
+def paint_row(field, row, color):
+    new_grid = field.copy()
+    new_grid.paint_row(row, color)
+    return new_grid
+
+def functional_assert(predicate, message, continuation): 
+    internal_assert(predicate, message) 
+    return continuation 
 
 def sample_003_functional():
     return (
@@ -114,20 +142,18 @@ def sample_003_functional():
     split_grid(Grid(side,side), lambda blank:
     split_color(uniform(GENERIC_COLORS), lambda color_a:
     split_color(uniform(GENERIC_COLORS), lambda color_b:
-    repeat(nb_objs,
-        pair(blank,blank),
-        lambda xy: ( 
-            split_ptdgrid(reserve_shape(snd(xy), large_square, center(large_square)), lambda ptdgrid:
-            pair(
-                split_grid(paint_sprite(fst(xy), monochrome(small_plus, color_a), snd(ptdgrid), center(small_plus)), lambda half_paint:  
-                    paint_cell(half_paint, snd(ptdgrid), color_b)
-                ),
-                split_grid(paint_sprite(fst(ptdgrid), monochrome(large_plus, color_a), snd(ptdgrid), center(large_plus)), lambda half_paint: 
-                    paint_sprite(half_paint, monochrome(large_times, color_b), snd(ptdgrid), center(large_times))
-                )
-            ))
-        )
-    )))))))
+    functional_assert(negate(eq(color_a, color_b)), 'need distinct colors',
+    repeat(nb_objs, pair(blank,blank), lambda xy: ( 
+        split_ptdgrid(reserve_shape(snd(xy), large_square, center(large_square)), lambda ptdgrid:
+        pair(
+            split_grid(paint_sprite(fst(xy), monochrome(small_plus, color_a), snd(ptdgrid), center(small_plus)), lambda half_paint:  
+                paint_cell(half_paint, snd(ptdgrid), color_b)
+            ),
+            split_grid(paint_sprite(fst(ptdgrid), monochrome(large_plus, color_a), snd(ptdgrid), center(large_plus)), lambda half_paint: 
+                paint_sprite(half_paint, monochrome(large_times, color_b), snd(ptdgrid), center(large_times))
+            )
+        ))
+    )))))))))
 
 def sample_003():
     side = 11 + geometric(0.5)
@@ -145,6 +171,28 @@ def sample_003():
         y.paint_sprite(monochrome(large_plus, color_a), cell, center(large_plus))
         y.paint_sprite(monochrome(large_times, color_b), cell, center(large_times))
     return x, y
+
+def sample_006_functional():
+    return (
+    split_int(3+geometric(0.1), lambda side:
+    split_grid(Grid(side,side), lambda blank:
+    fold(rows(blank), pair(blank,blank), lambda row: lambda xy: ( 
+        cond(bernoulli(0.5),
+            pair(
+                paint_row(fst(xy), row, uniform(GENERIC_COLORS)),
+                paint_row(snd(xy), row, 'A')
+            ),
+            pair(
+                split_intcolorpairs(moomap(columns(blank), lambda c: pair(c,uniform(GENERIC_COLORS))), lambda intcolorpairs: 
+                functional_assert(negate(eq(moolen(uniq(intcolorpairs)),1)), 'need polychromatic row',
+                    fold(intcolorpairs, fst(xy), lambda intcolor: lambda x: ( 
+                        paint_cell(x, pair(row,fst(intcolor)), snd(intcolor))
+                    ))
+                )),
+                snd(xy)
+            )
+        )
+    )))))
 
 def sample_006():
     side = 3 + geometric(0.1) 
@@ -334,8 +382,8 @@ def tenacious_gen(f, nb_iters=100):
             continue
 
 routines = [
-    sample_003_functional,
-    #sample_006,
+    #sample_003_functional,
+    sample_006_functional,
     #sample_007,
     #sample_008,
     #sample_016,

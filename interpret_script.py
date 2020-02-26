@@ -14,7 +14,6 @@ from lg_types import tInt, tCell, tColor, tShape, tBlock, tGrid, tDir, tNoise
 from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 
 from shape import ShapeGen 
-from scene import Scene # aka grid
 from block import GENERIC_COLORS, Block, block_equals
 from grid import Grid
 

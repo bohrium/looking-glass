@@ -103,16 +103,10 @@ class WeightLearner:
         scores = normalize(scores)
         return scores
 
-#atoms = {
-#    'hello':tInt.frm(tCell).frm(),
-#    'hello':tInt.frm(),
-#    'hello':tInt,
-#}
-
 tree = [
-    'hello',
-    {('moo', tInt):
-        'coon'
+    'hello_prim',
+    {('moo_varnm', tInt):
+        'coon_prim'
     },
 ]
 
@@ -122,4 +116,4 @@ print(WL.types)
 print(WL.atoms)
 WL.compute_weights()
 print(WL.predict('root', {}))
-print(WL.predict('hello', {}))
+print(WL.predict('hello_prim', {}))
