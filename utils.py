@@ -48,8 +48,8 @@ class Colorizer(object):
             '@A ': '\033[38;2;128;128;128m',  # color: gray  
             '@W ': '\033[38;2;255;255;255m',  # color: white
 
-            '@R ': '\033[38;2;224;000;064m',  # color: red
-            '@O ': '\033[38;2;224;096;000m',  # color: orange 
+            '@R ': '\033[38;2;255;000;064m',  # color: red
+            '@O ': '\033[38;2;224;128;000m',  # color: orange 
             '@Y ': '\033[38;2;255;224;000m',  # color: yellow
 
             '@G ': '\033[38;2;128;224;000m',  # color: green

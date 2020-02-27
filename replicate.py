@@ -130,6 +130,10 @@ def paint_sprite(field, sprite, cell_in_field, cell_in_sprite):
     new_grid = field.copy()
     new_grid.paint_sprite(sprite, cell_in_field, cell_in_sprite)
     return new_grid
+def reserve_and_paint_sprite(field, sprite, cell_in_sprite):
+    new_grid, cell_in_field = reserve_shape(grid, silouhette(sprite), cell_in_sprite) 
+    return paint_sprite(new_grid, sprite, cell_in_field, cell_in_sprite)
+
 def paint_cell(field, cell_in_field, color):
     new_grid = field.copy()
     new_grid.paint_cell(cell_in_field, color)
@@ -220,10 +224,11 @@ def sample_006():
             x.colors[r,:] = np.array(colors)
     return x, y
 
+# TODO: use place_and_paint_sprite for 007, 008!
 def sample_007_functional():
     return (
     split_int(10+geometric(0.1), lambda side:
-    split_int(2+geometric(0.5), lambda nb_big_objs:
+    split_int(2+geometric(0.25), lambda nb_big_objs:
     split_grid(Grid(side,side), lambda blank:
     split_shape(gen_shape(None, 4), lambda shape_big:
     split_shape(gen_shape(None, 4), lambda shape_small:
@@ -415,8 +420,8 @@ def tenacious_gen(f, nb_iters=100):
 
 routines = [
     #sample_003_functional,
-    #sample_006_functional,
-    sample_007_functional,
+    sample_006_functional,
+    #sample_007_functional,
     #sample_008,
     #sample_016,
     #sample_022,
