@@ -257,13 +257,15 @@ resources = {
     'paint_sprite':lambda g: lambda s: lambda c: lambda cc: paint_sprite(g,s,c,cc),
     'paint_cell':lambda g: lambda cel: lambda col: paint_cell(g,cel, col),
 }
-P = Parser(code)
-t = P.get_tree()
-print(t)
-while True:
-   try:
-       x,y = evaluate_tree(t, resources)
-       print(CC+str_from_grids([x.colors, y.colors], render_color))
-       break
-   except InternalError:
-       continue
+
+if __name__=='__main__':
+    P = Parser(code)
+    t = P.get_tree()
+    print(t)
+    while True:
+       try:
+           x,y = evaluate_tree(t, resources)
+           print(CC+str_from_grids([x.colors, y.colors], render_color))
+           break
+       except InternalError:
+           continue
