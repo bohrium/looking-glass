@@ -188,7 +188,7 @@ def sample_006_functional():
     return (
     split_int(3+geometric(0.1), lambda side:
     split_grid(Grid(side,side), lambda blank:
-    fold(rows(blank), pair(blank,blank), lambda row: lambda xy: ( 
+    fold(rows(blank), , lambda row: lambda xy: ( 
         cond(bernoulli(0.5),
             pair(
                 paint_row(fst(xy), row, uniform(GENERIC_COLORS)),
