@@ -25,9 +25,13 @@ from block import GENERIC_COLORS, Block, block_equals
 from grid import Grid
 
 from lg_types import tInt, tCell, tColor, tShape, tBlock, tGrid, tDir, tNoise
+from lg_types import tNmbrdBlock, tClrdCell, tPtdGrid, tGridPair
+
 from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 
 def sm(lg_type): 
+    ''' decorator
+    '''
     def dec(method):
         method.lg_type = lg_type
         method = staticmethod(method)
@@ -76,13 +80,49 @@ class PrimitivesWrapper:
     def __init__(self):
         ''' Package curried versions of all non-magic methods and attributes
         '''
-        self.primitives = {
-            nm: (
-                self.__curry__(self.__getattribute__(nm)),
-                self.__getattribute__(nm).lg_type
-            )
-            for nm in dir(PrimitivesWrapper) if not nm.startswith('__') 
+        self.primitives = {}
+        common_types = {
+            tInt, tCell, tColor, tShape, tGrid,
+            #tPtdGrid, tIntColorPairs,
+        } 
+        for goal in common_types:
+            self.__make_repeat__(goal=goal)
+            self.__make_uniq__(target=goal)
+            self.__make_len__(target=goal)
+            self.__make_cond__(goal=goal)
+            self.__make_eq__(source=goal)
+            for t in common_types:
+                self.__make_split__(subgoal=t, goal=goal) 
+                self.__make_fold__(contained=t, goal=goal)
+                self.__make_map__(source=t, target=goal)
+
+        type_decompositions = {
+            tCell:(tInt, tInt),
+            tDir:(tInt, tInt),
+            tClrdCell:(tCell, tColor),
+            tPtdGrid:(tGrid, tCell),
+            tGridPair:(tGrid, tGrid),
+            tBlock:(tShape, tColor),
+            tNmbrdBlock:(tBlock, tInt),
         }
+        for prod, (fst, snd) in type_decompositions.items():
+            self.__make_pair__(prod=prod, fst=fst, snd=snd)
+            self.__make_fst__(prod=prod, fst=fst, snd=snd)
+            self.__make_snd__(prod=prod, fst=fst, snd=snd)
+
+
+        for method_nm in dir(PrimitivesWrapper):
+            if method_nm.startswith('__'): continue 
+            method = self.__getattribute__(method_nm)
+            name = method_nm.replace('_C_', '<').replace('_J_', '>') 
+
+            if name in self.primitives:
+                print(CC+'@R overwriting predefined @B {} @D '.format(name))
+
+            self.primitives[name] = (
+                self.__curry__(method),
+                method.lg_type
+            )
 
     #=========================================================================#
     #=  1. IMPLEMENTATIONS  ==================================================#
@@ -91,70 +131,92 @@ class PrimitivesWrapper:
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~~ 1.0 Generics  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
                 
-    #-----------------  1.0.0 split  -----------------------------------------#
+    #-----------------  1.0.0 coq tactics  -----------------------------------#
 
-    @sm(tShape)
-    def split_shape(v, f): return f(v)
-    @sm(tInt)
-    def split_int(v, f): return f(v)
-    @sm(tInt)
-    def split_grid(v, f): return f(v)
-    @sm(tInt)
-    def split_color(v, f): return f(v)
-    @sm(tInt)
-    def split_cell(v, f): return f(v)
-    @sm(tInt)
-    def split_intcolorpairs(v, f): return f(v)
-    @sm(tInt)
-    def split_ptdgrid(v, f): return f(v)
+    def __make_split__(self, subgoal, goal):
+        name = 'split<{}><{}>'.format(subgoal, goal) 
+        lg_type = goal.frm(goal.frm(subgoal)).frm(subgoal)
+        impl = lambda v: lambda f: f(v)
+
+        self.primitives[name] = (impl, lg_type)
 
     #-----------------  1.0.1 product types  ---------------------------------#
 
-    @sm(tInt)
-    def pair(x,y): return (x,y)
-    @sm(tInt)
-    def fst(z): return z[0]
-    @sm(tInt)
-    def snd(z): return z[1]
+    def __make_pair__(self, fst, snd, prod):
+        name = 'pair<{}>'.format(prod) 
+        lg_type = prod.frm(snd).frm(fst)
+        impl = lambda x: lambda y: (x,y)
+        self.primitives[name] = (impl, lg_type)
+    def __make_fst__(self, fst, snd, prod):
+        name = 'fst<{}>'.format(prod) 
+        lg_type = fst.frm(prod)
+        impl = lambda xy: xy[0]
+        self.primitives[name] = (impl, lg_type)
+    def __make_snd__(self, fst, snd, prod):
+        name = 'snd<{}>'.format(prod) 
+        lg_type = snd.frm(prod)
+        impl = lambda xy: xy[1]
+        self.primitives[name] = (impl, lg_type)
 
     #-----------------  1.0.2 iteration  -------------------------------------#
 
-    @sm(tInt)
-    def moomap(collection, f): return [f(c) for c in collection]
-    @sm(tInt)
-    def repeat(n,i,f):
-        for _ in range(n):
-            i = f(i)
-        return i
-    @sm(tInt)
-    def fold(collection,i,f):
-        for c in collection:
-            i = f(c)(i)
-
-    @sm(tInt)
-    def uniq(collection): return list(set(collection))
-    @sm(tInt)
-    def moolen(collection): return len(collection) 
+    def __make_repeat__(self, goal):
+        name = 'repeat<{}>'.format(goal) 
+        lg_type = goal.frm(goal.frm(goal)).frm(goal).frm(tInt)
+        impl = (
+            lambda n: lambda i: lambda f:
+            reduce(lambda a,b: f(a), [i] + list(range(n)))
+        )
+        self.primitives[name] = (impl, lg_type)
+    def __make_fold__(self, contained, goal):
+        name = 'fold<{}><{}>'.format(contained,goal) 
+        lg_type = goal.frm(goal.frm(goal).frm(contained)).frm(goal).frm(contained.s())
+        impl = (
+            lambda n: lambda i: lambda f:
+            reduce(lambda a,b: f(b)(a), [i] + list(range(n)))
+        )
+        self.primitives[name] = (impl, lg_type)
+    def __make_map__(self, source, target):
+        name = 'map<{}><{}>'.format(source, target)
+        lg_type = target.s().frm(source.s()).frm(target.frm(source))
+        impl = lambda f: lambda ss: map(f, ss)
+        self.primitives[name] = (impl, lg_type)
+    def __make_uniq__(self, target):
+        name = 'uniq<{}>'.format(target)
+        lg_type = target.s().frm(target.s())
+        impl = lambda ss: list(set(collection))
+        self.primitives[name] = (impl, lg_type)
+    def __make_len__(self, target):
+        name = 'len<{}>'.format(target)
+        lg_type = tInt.frm(target.s())
+        impl = lambda ss: len(ss)
+        self.primitives[name] = (impl, lg_type)
 
     #-----------------  1.0.3 logic  -----------------------------------------#
+
+    def __make_cond__(self, goal):
+        name = 'cond<{}>'.format(goal)
+        lg_type = goal.frm(goal).frm(goal).frm(tInt)
+        impl = lambda c: lambda t: lambda f: t if c else f
+        self.primitives[name] = (impl, lg_type)
+    def __make_eq__(self, source):
+        name = 'eq<{}>'.format(source)
+        lg_type = tInt.frm(source).frm(source)
+        impl = lambda a: lambda b: a==b
+        self.primitives[name] = (impl, lg_type)
 
     @sm(tInt)
     def negate(a): return not a
 
-    @sm(tInt)
-    def cond(c,t,f): return t if c else f
+    @sm(tInt.frm(tInt).frm(tInt))
+    def lt_int(a, b): return a<b
 
-    @sm(tInt)
-    def lt(a, b): return a<b
-    @sm(tInt)
-    def eq(a, b): return a==b 
-    @sm(tInt)
-    def shape_eq(lhs, rhs):
+    @sm(tInt.frm(tShape).frm(tShape))
+    def eq_C_shape_J_(lhs, rhs):
         return (
             lhs.shape==rhs.shape
             and np.sum(np.abs(lhs-rhs))==0
         )
-
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~~ 1.1 Basic Constructors  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -263,5 +325,8 @@ class PrimitivesWrapper:
  
 if __name__=='__main__':
     P = PrimitivesWrapper()
-    for p_nm, (p_impl, p_type) in P.primitives.items():
+    for i, (p_nm, (p_impl, p_type)) in enumerate(P.primitives.items()):
         print(CC+'@O {} @D : @P {} @D '.format(p_nm, str(p_type)))
+        if 20<=i<len(P.primitives):
+            print(CC+'and so on ...')
+            break
