@@ -90,14 +90,19 @@ class LGType:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~  1.0 Base Types  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-tNoise = LGType('base', name='noise')
-tInt   = LGType('base', name='int')
-tCell  = LGType('base', name='cell')
-tDir   = LGType('base', name='dir') 
-tColor = LGType('base', name='color')
-tShape = LGType('base', name='shape')
-tBlock = LGType('base', name='block')
-tGrid  = LGType('base', name='grid')
+tNoise          = LGType('base', name='noise')
+tInt            = LGType('base', name='int')
+tColor          = LGType('base', name='color')
+tShape          = LGType('base', name='shape')
+tGrid           = LGType('base', name='grid')
+
+tCell           = LGType('base', name='cell')  # (int, int)
+tDir            = LGType('base', name='dir')   # (int, int) 
+tNmbrdBlock     = LGType('base', name='nmbrdblock')
+tBlock          = LGType('base', name='block') # (shape, color)
+tClrdCell       = LGType('base', name='clrdcell')
+tPtdGrid        = LGType('base', name='ptdgrid')
+tGridPair       = LGType('base', name='gridpair')
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~  1.2 Templates for Fake Polymorphism  ~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -105,6 +110,7 @@ tGrid  = LGType('base', name='grid')
 tPred_   = lambda t:   tInt.frm(t)
 tRepeat_ = lambda t:   t.s().frm(tInt)
 tCount_  = lambda t:   tInt.frm(t.s())
+tLen_    = lambda t:   tInt.frm(t.s())
 tFilter_ = lambda t:   t.s().frm(tInt.frm(t)).frm(t.s())
 tArgmax_ = lambda t:   t.frm(tInt.frm(t)).frm(t.s())
 tMap_    = lambda t,u: t.s().frm(t.frm(u)).frm(u.s())

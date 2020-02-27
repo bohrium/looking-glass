@@ -419,9 +419,9 @@ def tenacious_gen(f, nb_iters=100):
             continue
 
 routines = [
-    #sample_003_functional,
+    sample_003_functional,
     sample_006_functional,
-    #sample_007_functional,
+    sample_007_functional,
     #sample_008,
     #sample_016,
     #sample_022,
@@ -435,6 +435,7 @@ if __name__=='__main__':
 
     while True:
         for sample in routines:
-            x,y = tenacious_gen(sample)
-            print(CC+str_from_grids([x.colors, y.colors], render_color))
+            for _ in range(3):
+                x,y = tenacious_gen(sample)
+                print(CC+str_from_grids([x.colors, y.colors], render_color))
             input('next?')

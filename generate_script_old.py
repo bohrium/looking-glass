@@ -28,8 +28,6 @@ from utils import reseed, bernoulli, geometric, uniform # math
 from lg_types import tInt, tCell, tColor, tShape, tBlock, tGrid, tDir, tNoise
 from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 
-
-
 #=============================================================================#
 #=====  0. PROVER  ===========================================================#
 #=============================================================================#

@@ -1,8 +1,15 @@
 ''' author: samtenka
     change: 2020-02-25
     create: 2019-02-25
-    descrp:
-    to use: 
+    descrp: learn dsl generation weights from observed trees 
+    to use: To train on some trees then sample from a child of 'root' with one
+            resource of type tInt, type:
+                from fit_weights import WeightLearner
+                WL = WeightLearner()
+                for t in trees:
+                    WL.observe_tree(t)
+                WL.compute_weights()
+                WL.predict('root', {tInt})
 '''
 
 import numpy as np
@@ -30,7 +37,7 @@ class WeightLearner:
     def __init__(self):
         self.train_set = []
         self.types = set() 
-        self.atoms = {'root'}
+        self.atoms = {'root', 'resource'}
 
     def observe_datapoint(self, head, parent, resources):
         if head in resources:
@@ -55,7 +62,7 @@ class WeightLearner:
             for arg in args:
                 self.observe_tree(arg, caller, resources)
 
-    def initialize_weights(self, pseudo_unigram=1.0, pseudo_bigram=1.0, pseudo_resource=1.0):
+    def initialize_weights(self, pseudo_unigram=0.1, pseudo_bigram=0.1, pseudo_resource=0.1):
         self.w_unigram = {atom:pseudo_unigram for atom in self.atoms}
         self.w_bigram = {
             parent: {atom:pseudo_bigram for atom in self.atoms}
@@ -93,27 +100,28 @@ class WeightLearner:
         }
 
         for a,v in self.w_unigram.items():
-            scores[a] *= v**1.0/3
+            scores[a] *= v**(0.0/5)
         for a,v in self.w_bigram[parent].items():
-            scores[a] *= v**1.0/3
-        for r in resources.values():
+            scores[a] *= v**(5.0/5)
+        for r in resources:
             for a,v in self.w_resources[r].items():
-                scores[a] *= v**((1.0/3)/len(resources))
+                scores[a] *= v**((0.0/5)/len(resources))
 
         scores = normalize(scores)
         return scores
 
-tree = [
-    'hello_prim',
-    {('moo_varnm', tInt):
-        'coon_prim'
-    },
-]
-
-WL = WeightLearner()
-WL.observe_tree(tree)
-print(WL.types)
-print(WL.atoms)
-WL.compute_weights()
-print(WL.predict('root', {}))
-print(WL.predict('hello_prim', {}))
+if __name__=='__main__':
+    tree = [
+        'hello_prim',
+        {('moo_varnm', tInt):
+            'coon_prim'
+        },
+    ]
+    
+    WL = WeightLearner()
+    WL.observe_tree(tree)
+    print(WL.types)
+    print(WL.atoms)
+    WL.compute_weights()
+    print(WL.predict('root', set([])))
+    print(WL.predict('hello_prim', set([])))

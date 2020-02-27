@@ -1,9 +1,15 @@
-TODO
+THIS WEEK TODO
 
 ```all on branch TREE```
 
 sample programs from dsl
- [] train currently hacky fit_weights.py on one program 
+ >< train currently hacky fit_weights.py on one program 
+ [] automate and expand the sigs_by_name for resources.py
+     >< decorate methods in resources.py to know their types
+     [] Q: goal-directed polymorphism?
+     [] introduce all special projections/pairings 
+     [] annotate all types appropriately 
+     [] noise as arguments should be reflected in types
  [] let a probabilistic dsl direct generate_script.py.  Inspired by AI Coq,
         e.g. the 'root' token, when generated, performs a coq 'intro'!
      [] type-directed, as before, but need also to track parent etc
@@ -38,10 +44,8 @@ functionalize 10 easy tasks
 
 make sure programs are evaluatable
  >< parse programs into runnable lambdas (in parse.py)
- [] populate resources.py to provide implementations used by
+ >< populate resources.py to provide implementations used by
         interpret_script.py
-     [] noise as arguments
-     [] type annotations (from argument names?)
      [] clarify interface with shape.py, grid.py, etc
 
 use l1 regularized logistic regression to train on sample trees
