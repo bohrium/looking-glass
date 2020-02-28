@@ -25,7 +25,7 @@ from block import GENERIC_COLORS, Block, block_equals
 from grid import Grid
 
 from lg_types import tInt, tCell, tColor, tShape, tBlock, tGrid, tDir, tNoise
-from lg_types import tNmbrdBlock, tClrdCell, tPtdGrid, tGridPair
+from lg_types import tNmbrdBlock, tClrdCell, tPtdGrid, tGridPair, tNmbrdColor
 
 from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 
@@ -85,7 +85,7 @@ class PrimitivesWrapper:
         self.primitives = {}
         common_types = {
             tInt, tCell, tColor, tShape, tGrid,
-            tPtdGrid, tGridPair#, tIntColorPairs,
+            tPtdGrid, tGridPair, tNmbrdColor, tNmbrdColor.s()
         } 
         for goal in common_types:
             self.__make_repeat__(goal=goal)
@@ -101,6 +101,7 @@ class PrimitivesWrapper:
         type_decompositions = {
             tCell:(tInt, tInt),
             tDir:(tInt, tInt),
+            tNmbrdColor:(tInt, tColor),
             tClrdCell:(tCell, tColor),
             tPtdGrid:(tGrid, tCell),
             tGridPair:(tGrid, tGrid),
@@ -174,14 +175,14 @@ class PrimitivesWrapper:
         name = 'fold<{}><{}>'.format(contained,goal) 
         lg_type = goal.frm(goal.frm(goal).frm(contained)).frm(goal).frm(contained.s())
         impl = (
-            lambda n: lambda i: lambda f:
-            reduce(lambda a,b: f(b)(a), [i] + list(range(n)))
+            lambda cs: lambda i: lambda f:
+            functools.reduce(lambda a,b: f(b)(a), [i] + list(cs))
         )
         self.primitives[name] = (impl, lg_type)
     def __make_map__(self, source, target):
         name = 'map<{}><{}>'.format(source, target)
-        lg_type = target.s().frm(source.s()).frm(target.frm(source))
-        impl = lambda f: lambda ss: map(f, ss)
+        lg_type = target.s().frm(target.frm(source)).frm(source.s())
+        impl = lambda ss: lambda f: map(f, ss)
         self.primitives[name] = (impl, lg_type)
     def __make_uniq__(self, target):
         name = 'uniq<{}>'.format(target)
@@ -230,11 +231,15 @@ class PrimitivesWrapper:
     @sm(tNoise)
     def noise(): return None
     @sm(tInt.frm(tNoise))
+    def coin(tNoise): return bernoulli(0.5)
+    @sm(tInt.frm(tNoise))
     def afew(noise): return  2+geometric(0.25)
     @sm(tInt.frm(tNoise))
     def many(noise): return 10+geometric(2.50)
     @sm(tColor.frm(tNoise))
     def rainbow(noise): return uniform(GENERIC_COLORS)
+    @sm(tColor)
+    def gray(): return 'A'
     @sm(tGrid.frm(tInt).frm(tInt))
     def new_grid(h, w): return Grid(h,w)
 
@@ -323,13 +328,18 @@ class PrimitivesWrapper:
         new_grid = field.copy()
         new_grid.paint_cell(cell_in_field, color)
         return new_grid
+    @sm(tGrid.frm(tColor).frm(tInt).frm(tGrid))
+    def paint_row(field, row_nb, color):
+        new_grid = field.copy()
+        new_grid.paint_row(row_nb, color)
+        return new_grid
 
-    @sm(tGrid.frm(tCell).frm(tGrid).frm(tGrid).frm(tNoise))
-    def reserve_and_paint_sprite(noise, field, sprite, cell_in_sprite):
-        new_grid, cell_in_field = reserve_shape(
-            grid, silouhette(sprite), cell_in_sprite, noise
-        ) 
-        return paint_sprite(new_grid, sprite, cell_in_field, cell_in_sprite)
+    #@sm(tGrid.frm(tCell).frm(tGrid).frm(tGrid).frm(tNoise))
+    #def reserve_and_paint_sprite(noise, field, sprite, cell_in_sprite):
+    #    new_grid, cell_in_field = reserve_shape(
+    #        grid, silouhette(sprite), cell_in_sprite, noise
+    #    ) 
+    #    return paint_sprite(new_grid, sprite, cell_in_field, cell_in_sprite)
  
 if __name__=='__main__':
     NB_LINES_PER_FETCH = 25

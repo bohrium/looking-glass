@@ -38,6 +38,7 @@ def evaluate_tree(tree, resources):
 if __name__=='__main__':
     CODE_FILE_NM = 'manual.003.arcdsl'
     CODE_FILE_NM = 'hello.arcdsl'
+    CODE_FILE_NM = 'manual.006.arcdsl'
     with open(CODE_FILE_NM) as f:
         code = f.read()
     print(CC+'parsing @P {}@D ...'.format(CODE_FILE_NM))
@@ -54,11 +55,11 @@ if __name__=='__main__':
        except InternalError:
            continue
 
-    WL = WeightLearner()
-    WL.observe_tree(t)
-    WL.compute_weights()
-    predictions = WL.predict('root', set([]))
-    for k,v in sorted(predictions.items(), reverse=True, key=lambda xy: xy[1]):
-        print(CC+'@R {} @G {}'.format(k,v))
+    #WL = WeightLearner()
+    #WL.observe_tree(t)
+    #WL.compute_weights()
+    #predictions = WL.predict('root', set([]))
+    #for k,v in sorted(predictions.items(), reverse=True, key=lambda xy: xy[1]):
+    #    print(CC+'@R {} @G {}'.format(k,v))
 
 
