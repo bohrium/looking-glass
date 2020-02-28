@@ -254,18 +254,18 @@ class PrimitivesWrapper:
     @sm(tShape)                                                     
     def large_times (): return PrimitivesWrapper.make_times (5) 
 
-    @sm(tShape)
+    @sm(tShape.frm(tInt))
     def make_square(side):
         shape = np.ones((side, side))
         return shape
-    @sm(tShape)
+    @sm(tShape.frm(tInt))
     def make_plus(side):
         shape = np.zeros((side, side))
         for i in range(side):
             shape[i,side//2] = 1
             shape[side//2,i] = 1
         return shape
-    @sm(tShape)
+    @sm(tShape.frm(tInt))
     def make_times(side):
         shape = np.zeros((side, side))
         for i in range(side):

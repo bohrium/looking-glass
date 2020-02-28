@@ -8,17 +8,18 @@
 from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
 from utils import reseed, bernoulli, geometric, uniform # math
-from collections import namedtuple
 
 import numpy as np
 
 from shape import ShapeGen
 
+from collections import namedtuple
+Block = namedtuple('Block', ['shape', 'color']) 
+
 SPECIAL_COLORS = 'KA'
 GENERIC_COLORS = 'BRGYPOCN'
 COLORS = SPECIAL_COLORS + GENERIC_COLORS
 
-Block = namedtuple('Block', ['shape', 'color']) 
 def block_equals(lhs, rhs):
     return (
             lhs.color==rhs.color

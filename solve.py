@@ -36,7 +36,7 @@ def evaluate_tree(tree, resources):
         return partial
 
 if __name__=='__main__':
-    CODE_FILE_NM = 'manual.003.dsl'
+    CODE_FILE_NM = 'manual.003.arcdsl'
     with open(CODE_FILE_NM) as f:
         code = f.read()
     print(CC+'parsing @P {}@D ...'.format(CODE_FILE_NM))

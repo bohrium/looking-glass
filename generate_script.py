@@ -1,25 +1,13 @@
 ''' author: samtenka
-    change: 2020-02-20
+    change: 2020-02-28
     create: 2020-02-16
-    descrp: generate a script of type grid x grid <-- noise, factored into
-            components of type 
-                Z_s : blocks <-- noise
-                Z_b : block  <-- blocks
-                Z_g : grid   <-- block <-- blocks <-- noise
-                X   : grid   <-- grid <-- block <-- noise 
-                Y   : grid   <-- grid <-- block             
-            The overall map is then defined as
-                lambda n:
-                    (lambda s:
-                        (lambda b:
-                            (lambda g:
-                                (X n b g, Y b g)
-                            )(Z_g n b s)
-                        )(Z_b s)
-                    )(Z_s n)
-    to use: call  
+    descrp: generate a script of type grid x grid <-- noise
+    to use: type
+                from generate_script import get_script 
                 get_script()
 '''
+
+from collections import namedtuple
 
 from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
@@ -28,176 +16,115 @@ from utils import reseed, bernoulli, geometric, uniform # math
 from lg_types import tInt, tCell, tColor, tShape, tBlock, tGrid, tDir, tNoise
 from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 
+from resources import PrimitivesWrapper
+import tqdm
 
 
 #=============================================================================#
 #=====  0. PROVER  ===========================================================#
 #=============================================================================#
 
-sigs_by_nm = {
-    # basic samplers:
-    'gen_some': tInt.frm(tNoise),                      # [1,2,3]
-    'gen_svrl': tInt.frm(tNoise),                      # [3,4,5]
-    #'gen_many': tInt.frm(tNoise),                      # [15...30] 
-    'gen_cell': tCell.frm(tGrid).frm(tNoise),          # uniform cell
-    'gen_crnr': tCell,                                 # upper left cell
-    'gray'    : tColor,                                # 'A'
-    'gen_rain': tColor.frm(tNoise),                    # GENERIC_COLORS
-    'gen_shap': tShape.frm(tInt).frm(tNoise),          # get random shape 
-    # product types:
-    'blok_cons': tBlock.frm(tShape).frm(tColor),
-    'shap_blok': tShape.frm(tBlock),
-    'colr_blok': tColor.frm(tBlock),
-    # render a grid:
-    'fill_grd':  tGrid.frm(tCell).frm(tColor).frm(tGrid),
-    'noise_grd': tGrid.frm(tColor).frm(tNoise).frm(tGrid),      # sparse noise
-    'blnk_grd':  tGrid.frm(tInt).frm(tInt),                     # black with given height, width
-    'rndr_blks': tGrid.frm(tBlock.s()).frm(tGrid).frm(tNoise),
-    'rndr_blk':  tGrid.frm(tBlock).frm(tGrid),                  # put block in upper right corner
-    ## numerical concepts:
-    'volume_shap':  tInt.frm(tShape),
-    'height_shap':  tInt.frm(tShape),
-    'width_shap':  tInt.frm(tShape),
-    'amax_blocks': tArgmax_(tBlock),
-    #'amax_shapes': tArgmax_(tShape),
-    ## list helpers:
-    #'sing_cols': tColor.s().frm(tColor),
-    #'cons_cols': tColor.s().frm(tColor).frm(tColor.s()),
-    'sing_blks': tBlock.s().frm(tBlock),
-    'gen_blks': tBlock.s().frm(tNoise).frm(tBlock.frm(tNoise)).frm(tInt),
-    'cons_blks': tBlock.s().frm(tBlock).frm(tBlock.s()),
-    'uniq_blks': tBlock.s().frm(tBlock.s()),
-}
 
-var_count = 0
-def get_fresh():
-    global var_count
-    var_count += 1
-    return 'x'+str(var_count)
+class GrammarSampler:
+    def __init__(self, verbose=False, depth_bound=15):
+        self.primitives = PrimitivesWrapper().primitives
+        self.weights = None
+        self.verbose = verbose
+        self.timeout_prob = 1e-2
+        self.nb_tries = 10**2
+        self.depth_bound = depth_bound
 
-verbose = False
+        self.var_count = 0
 
-def construct(goal, resources):
-    if verbose:
-        print('analyzing {}'.format(str(goal)))
+    def reset_varcount(self):
+        self.var_count = 0
 
-    if bernoulli(1e-5):
-        # random timeout
-        return
+    def get_fresh(self):
+        self.var_count += 1
+        return 'x'+str(self.var_count)
 
-    if bernoulli(0.1): # split
-        split = uniform([
-            tInt, tColor, tShape, tShapes, tBlock, tBlocks, tGrid
-        ])
-        arg  = construct(split, resources)
+    Match = namedtuple('Match', ['token', 'name', 'hypoths']) 
 
-        var_nm = get_fresh()
-        resources = {k:v for k,v in resources.items()}
-        resources[var_nm] = split
-
-        body = construct(goal, resources)
-        return {
-            'text':'{}(({}->{})({}))'.format(var_nm, body['text'], arg['text']),
-            'pyth': '(lambda {}: {})({})'.format(var_nm, body['pyth'], arg['pyth'])
-        }
-    elif goal.kind=='from' and bernoulli(0.8): # destruct
-        var_nm = get_fresh()
-        resources = {k:v for k,v in resources.items()}
-        resources[var_nm] = goal.arg
-        body = construct(goal.out, resources)
-        return {
-            'text': '({}->{})'.format(var_nm, body['text']),
-            'pyth': '(lambda {}: {})'.format(var_nm, body['pyth'])
-        }
-    else:
+    def construct(self, goal, imprimitives={}, parent_token='root', depth_remaining=None):
+        '''
+            self.primitives should be a dictionary of types by name
+            imprimitives    should be a dictionary of types by name
+        '''
+        if bernoulli(self.timeout_prob):
+            pre(False, 'timeout')
+        if self.verbose:
+            print(CC+'current goal: @P {} @D '.format(str(goal)))
+        if depth_remaining is None:
+            depth_remaining = self.depth_bound
+        pre(depth_remaining, 'depth reached')
+    
         matches = [
-            (nm,sig,hypoths) for nm,sig in resources.items()
+            GrammarSampler.Match(nm, nm, hypoths)
+            for nm, (impl, sig) in self.primitives.items()
             for conseqs, hypoths in sig.conseq_hypoth_pairs()
             if goal in conseqs
         ] 
-        if matches:
-            nm, sig, hypoths = uniform(matches) 
-            if verbose:
-                print('matched {} with {}'.format(goal, nm))
-            hypoths = [construct(h, resources) for h in hypoths]
-            pretty_nm = str(CC+'@D '+nm+'@P ')
+        matches += [
+            GrammarSampler.Match('resource', nm, hypoths)
+            for nm, sig in imprimitives.items()
+            for conseqs, hypoths in sig.conseq_hypoth_pairs()
+            if goal in conseqs
+        ]
+        if goal.kind=='from': 
+            matches.append(
+                GrammarSampler.Match('root', None, [])
+            )
 
-            applied = nm
-            for h in hypoths[::-1]:
-                applied = '{}({})'.format(applied, h['pyth'])
+        match = uniform(matches)
+        #matches = self.weights.normalize({
+        #    m: self.weights.score(
+        #        m.token,
+        #        parent=parent,
+        #        resources=set(list(imprimitives.values()))
+        #    )
+        #    for m in matches
+        #})
 
-            return {
-                'text': (
-                    pretty_nm if not hypoths else
-                    '({} {})'.format(pretty_nm, ' '.join(h['text'] for h in hypoths[::-1]))
-                ),
-                'pyth': applied, 
-            }
+        if match.token == 'root':
+            if self.verbose:
+                print(CC+'introd @P {}@D '.format(goal, match))
+
+            var_nm = self.get_fresh()
+            resources = {k:v for k,v in imprimitives.items()}
+            resources[var_nm] = goal.arg
+            body = self.construct(goal.out, resources, 'root', depth_remaining-1)
+            return (
+                '(\\{}:{} -> \n{})'.format(var_nm, str(goal.arg), body)
+            )
         else:
-            # no match found
-            return
+            if self.verbose:
+                print(CC+'matched @P {}@D with @P {}@D '.format(goal, match.name))
 
-def tenacious_construct(goal, add_resources={}):
-    global var_count
+            hypotheses = [
+                self.construct(h, imprimitives, match.token, depth_remaining-1)
+                for h in match.hypoths
+            ]
+    
+            return (
+                match.name if not hypotheses else '({} {})'.format(
+                    match.name, ' '.join(h for h in hypotheses[::-1])
+                )
+            )
 
-    resources = {k:v for k,v in sigs_by_nm.items()}
-    for k,v in add_resources.items():
-        resources[k] = v
-
-    for i in range(10**4):
-        if verbose:
-            print()
-            print()
-        try:
-            code = construct(goal, resources)
-            pre(code is not None, '')
-            return code
-        except:
-            var_count=0
-            continue
-
-def get_script(): 
-    blocks  = tenacious_construct(tBlock.s(), {'noise':tNoise})
-    getblock= tenacious_construct(tBlock,     {'blocks':tBlock.s()})
-    Y       = tenacious_construct(tGrid,      {'block':tBlock})
-    blocks  ['pyth'] = 'lambda noise: {}'.format(blocks  ['pyth'])
-    getblock['pyth'] = 'lambda blocks: {}'.format(getblock['pyth'])
-    Y       ['pyth'] = 'lambda block: {}'.format(Y['pyth'])
-
-    X = {'pyth':'', 'text':''}
-
-    X['pyth'] = 'lambda noise: lambda blocks: rndr_blks(noise)(blnk_grd(10)(10))(blocks)'
-    X['text'] = '(rndr_blks noise (blnk_grd 10 10) blocks)'
-
-    print(str(CC+'@O blocks = @P '), blocks  ['text'])
-    print(str(CC+'@O block  = @P '), getblock['text'] + ' block')
-    print(str(CC+'@O X      = @P '), X       ['text'])
-    print(str(CC+'@O Y      = @P '), Y       ['text'])
-
-    return blocks, getblock, X, Y
+    def tenacious_construct(self, goal):
+        it = range(self.nb_tries) 
+        if not self.verbose: it = tqdm.tqdm(it)
+        for _ in it:
+            try:
+               code = self.construct(goal)
+               pre(code is not None, '')
+               return code
+            except:
+                self.reset_varcount()
+                continue
 
 if __name__=='__main__':
-    get_script()
+    GS = GrammarSampler(verbose=False)
+    c = GS.tenacious_construct(tInt) 
+    print(c)
 
-#    #X       = tenacious_construct(tGrid,      {'noise':tNoise, 'blocks':tBlock.s(),                })
-#    #Y       = tenacious_construct(tGrid,      {                                     'block':tBlock,})
-#    #X       ['pyth'] = 'lambda noise: lambda blocks: {}              '.format(X       ['pyth'])
-#    #Y       ['pyth'] = '                             lambda block: {}'.format(Y       ['pyth'])
-
-
-# future:
-#'one'     : tInt,                                  # 1 
-#'fit_shap': tCell.frm().frm(tGrid).frm(tNoise),    # get fitting location for shape 
-#'rndr_blk': tGrid.frm(tBlock).frm(tCell).frm(tGrid),
-#'gen_crnr': tCell.frm(tGrid)                       # upper left cell
-#'rndr_blk': tGrid.frm(tBlock).frm(tGrid),
-#'size_blks': tCount_(tBlock),
-#'sing_cels': tCell.s().frm(tCell),
-#'cons_cels': tCell.s().frm(tCell).frm(tCell.s()),
-#'gen_card': tDir.frm(tNoise),                      # [ferz directions] 
-#'black'   : tColor,                                # 'K'
-
-#elif goal.kind=='prod':
-#    fst = construct(goal.fst, resources)
-#    snd = construct(goal.snd, resources)
-#    return '({}; {})'.format(fst, snd)
