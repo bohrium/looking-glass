@@ -11,6 +11,7 @@ from collections import namedtuple
 import tqdm
 import numpy as np
 
+from utils import InternalError                         # maybe
 from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
 from utils import reseed, bernoulli, geometric, uniform # math
@@ -22,18 +23,13 @@ from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 from parse import Parser
 from fit_weights import WeightLearner
 from resources import PrimitivesWrapper
+from solve import evaluate_tree
+from vis import str_from_grids, render_color
 
 
 #=============================================================================#
 #=====  0. PROVER  ===========================================================#
 #=============================================================================#
-
-CODE_FILE_NM = 'manual.003.arcdsl'
-with open(CODE_FILE_NM) as f:
-    code = f.read()
-print(CC+'parsing @P {}@D ...'.format(CODE_FILE_NM))
-P = Parser(code)
-t = P.get_tree()
 
 class GrammarSampler:
     def __init__(self, verbose=False, depth_bound=10):
@@ -45,7 +41,9 @@ class GrammarSampler:
         self.var_count = 0
 
         self.weights = WeightLearner()
-        self.weights.observe_tree(t)
+
+    def learn_from(self, tree):
+        self.weights.observe_tree(tree)
         self.weights.compute_weights()
 
     def reset_varcount(self):
@@ -135,7 +133,44 @@ class GrammarSampler:
                 continue
 
 if __name__=='__main__':
+    print(CC+'@P learning from examples...@D ')
     GS = GrammarSampler(verbose=False)
-    c = GS.tenacious_construct(tGridPair) 
-    print(c)
+
+    CODE_FILE_NMS = [
+        'manual.003.arcdsl',
+        'manual.006.arcdsl',
+    ]
+    for file_nm in CODE_FILE_NMS:
+        with open(file_nm) as f:
+            code = f.read()
+        tree = Parser(code).get_tree()
+        GS.learn_from(tree)
+
+
+    print(CC+'@P sampling new program...@D ')
+    while True:
+        try:
+            code = GS.tenacious_construct(tGridPair) 
+            P = Parser(code)
+            t = P.get_tree()
+            break
+        except TypeError:
+            continue
+    print(CC+'@O ')
+    print(code)
+    print(CC+'@D ')
+
+    print(CC+'@P executing program...@D ')
+    primitives = PrimitivesWrapper().primitives
+    for _ in range(3):
+        for _ in range(100):
+           try:
+               x,y = evaluate_tree(t, primitives)
+               print(CC+str_from_grids([x.colors, y.colors], render_color))
+               break
+           except InternalError:
+               continue
+           except IndexError:
+               continue
+
 

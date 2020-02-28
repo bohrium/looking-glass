@@ -44,30 +44,38 @@ class LGType:
     #    return LGType('prod', fst=self, snd=rhs)
 
     def __eq__(self, rhs):
-        return str(self)==str(rhs)
+        return repr(self)==repr(rhs)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~  0.1 Display  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-    def __str__(self):
+    def __repr__(self):
         if self.kind=='base':
             return self.name
         elif self.kind=='from':
             return '{} <- {}'.format(
                 ('({})' if self.out.kind in ('prod') else '{}').format(
-                    str(self.out)
+                    repr(self.out)
                 ),
                 ('({})' if self.arg.kind in ('from', 'prod') else '{}').format(
-                    str(self.arg)
+                    repr(self.arg)
                 )
             )
         elif self.kind=='mset':
-            return '{{{}}}'.format(str(self.child))
+            return '{{{}}}'.format(repr(self.child))
         elif self.kind=='prod':
-            return '{} x {}'.format(str(self.fst), str(self.snd))
+            return '{} x {}'.format(repr(self.fst), repr(self.snd))
+
+    def __str__(self):   
+        if self.kind=='base':
+            return self.name
+        elif self.kind=='from':
+            return '{}_by_{}'.format(str(self.out), str(self.arg))
+        elif self.kind=='mset':
+            return '{}s'.format(str(self.child))
 
     def __hash__(self):
-        return hash(str(self))
+        return hash(repr(self))
 
     def conseq_hypoth_pairs(self):
         '''
@@ -98,6 +106,7 @@ tGrid           = LGType('base', name='grid')
 
 tCell           = LGType('base', name='cell')  # (int, int)
 tDir            = LGType('base', name='dir')   # (int, int) 
+tNmbrdColor     = LGType('base', name='nmbrdcolor')
 tNmbrdBlock     = LGType('base', name='nmbrdblock')
 tBlock          = LGType('base', name='block') # (shape, color)
 tClrdCell       = LGType('base', name='clrdcell')
@@ -121,11 +130,11 @@ tBinop_  = lambda t:   t.frm(t).frm(t)
 
 if __name__ == '__main__':
     #print('colored block  \t', tBlock.times(tColor))
-    print('blocks         \t', tBlock.s())
-    print('decompose block\t', tCell.s().frm(tBlock))
-    print('count cells    \t', tCount_(tCell))
-    print('argmax blocks  \t', tArgmax_(tBlock))
-    print('filter blocks  \t', tFilter_(tBlock))
-    print('map            \t', tMap_(tColor,tBlock))
-    print('classify color \t', tPred_(tColor))
-    print('binop on grids \t', tBinop_(tGrid))
+    print('blocks         \t', repr(tBlock.s()))
+    print('decompose block\t', repr(tCell.s().frm(tBlock)))
+    print('count cells    \t', repr(tCount_(tCell)))
+    print('argmax blocks  \t', repr(tArgmax_(tBlock)))
+    print('filter blocks  \t', repr(tFilter_(tBlock)))
+    print('map            \t', repr(tMap_(tColor,tBlock)))
+    print('classify color \t', repr(tPred_(tColor)))
+    print('binop on grids \t', repr(tBinop_(tGrid)))
