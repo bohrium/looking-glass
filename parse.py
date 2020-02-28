@@ -48,7 +48,7 @@ class Parser:
 
     def get_identifier(self): 
         old_i = self.i
-        while self.peek() in 'abcdefghijklmnopqrstuvwxyz_': self.march()
+        while self.peek() in 'abcdefghijklmnopqrstuvwxyz_<>': self.march()
         return self.string[old_i:self.i]
 
     def get_term(self): 

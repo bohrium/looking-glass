@@ -29,6 +29,8 @@ from lg_types import tNmbrdBlock, tClrdCell, tPtdGrid, tGridPair
 
 from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 
+import functools
+
 def sm(lg_type): 
     ''' decorator
     '''
@@ -83,7 +85,7 @@ class PrimitivesWrapper:
         self.primitives = {}
         common_types = {
             tInt, tCell, tColor, tShape, tGrid,
-            #tPtdGrid, tIntColorPairs,
+            tPtdGrid, tGridPair#, tIntColorPairs,
         } 
         for goal in common_types:
             self.__make_repeat__(goal=goal)
@@ -165,7 +167,7 @@ class PrimitivesWrapper:
         lg_type = goal.frm(goal.frm(goal)).frm(goal).frm(tInt)
         impl = (
             lambda n: lambda i: lambda f:
-            reduce(lambda a,b: f(a), [i] + list(range(n)))
+            functools.reduce(lambda a,b: f(a), [i] + list(range(n)))
         )
         self.primitives[name] = (impl, lg_type)
     def __make_fold__(self, contained, goal):
