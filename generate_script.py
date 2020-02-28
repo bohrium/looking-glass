@@ -8,33 +8,45 @@
 '''
 
 from collections import namedtuple
+import tqdm
+import numpy as np
 
 from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
 from utils import reseed, bernoulli, geometric, uniform # math
 
 from lg_types import tInt, tCell, tColor, tShape, tBlock, tGrid, tDir, tNoise
+from lg_types import tNmbrdBlock, tBlock, tClrdCell, tPtdGrid, tGridPair       
 from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 
+from parse import Parser
+from fit_weights import WeightLearner
 from resources import PrimitivesWrapper
-import tqdm
 
 
 #=============================================================================#
 #=====  0. PROVER  ===========================================================#
 #=============================================================================#
 
+CODE_FILE_NM = 'manual.003.arcdsl'
+with open(CODE_FILE_NM) as f:
+    code = f.read()
+print(CC+'parsing @P {}@D ...'.format(CODE_FILE_NM))
+P = Parser(code)
+t = P.get_tree()
 
 class GrammarSampler:
-    def __init__(self, verbose=False, depth_bound=15):
+    def __init__(self, verbose=False, depth_bound=10):
         self.primitives = PrimitivesWrapper().primitives
-        self.weights = None
         self.verbose = verbose
-        self.timeout_prob = 1e-2
+        self.timeout_prob = 1e-3
         self.nb_tries = 10**2
         self.depth_bound = depth_bound
-
         self.var_count = 0
+
+        self.weights = WeightLearner()
+        self.weights.observe_tree(t)
+        self.weights.compute_weights()
 
     def reset_varcount(self):
         self.var_count = 0
@@ -75,15 +87,14 @@ class GrammarSampler:
                 GrammarSampler.Match('root', None, [])
             )
 
-        match = uniform(matches)
-        #matches = self.weights.normalize({
-        #    m: self.weights.score(
-        #        m.token,
-        #        parent=parent,
-        #        resources=set(list(imprimitives.values()))
-        #    )
-        #    for m in matches
-        #})
+        predictions = self.weights.predict(parent_token, imprimitives.values())
+        probs = np.array([
+            predictions[m.token]
+            if m.token in predictions else 0.0
+            for m in matches
+        ])
+        probs = probs/np.sum(probs)
+        match = matches[np.random.choice(range(len(matches)), p=probs)]
 
         if match.token == 'root':
             if self.verbose:
@@ -116,15 +127,15 @@ class GrammarSampler:
         if not self.verbose: it = tqdm.tqdm(it)
         for _ in it:
             try:
-               code = self.construct(goal)
-               pre(code is not None, '')
-               return code
+              code = self.construct(goal)
+              pre(code is not None, '')
+              return code
             except:
                 self.reset_varcount()
                 continue
 
 if __name__=='__main__':
     GS = GrammarSampler(verbose=False)
-    c = GS.tenacious_construct(tInt) 
+    c = GS.tenacious_construct(tGridPair) 
     print(c)
 

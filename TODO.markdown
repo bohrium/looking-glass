@@ -10,9 +10,10 @@ sample programs from dsl
      >< introduce all special projections/pairings 
      >< annotate all types appropriately 
      >< noise as arguments should be reflected in types
- [] let a probabilistic dsl direct generate_script.py.  Inspired by AI Coq,
+ >< let a probabilistic dsl direct generate_script.py.  Inspired by AI Coq,
         e.g. the 'root' token, when generated, performs a coq 'intro'!
-     [] type-directed, as before, but need also to track parent etc
+     >< sample based on 'root', 'resources' notions of tree type
+     >< sample based also on weight learner! 
 
 functionalize 10 easy tasks 
  >< regard top levels in terms of pair<grid,grid> outer return type

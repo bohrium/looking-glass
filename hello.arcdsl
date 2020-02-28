@@ -1,0 +1,4 @@
+(split<grid><gridpair> (new_grid (afew noise) (afew noise)) (\x1:grid ->        
+(repeat<gridpair> (many noise) (split<int><gridpair> (many noise) (\x3:int ->   
+(pair<gridpair> x1 (monochrome large_times (rainbow noise))))) (\x2:gridpair -> 
+(pair<gridpair> x1 x1)))))

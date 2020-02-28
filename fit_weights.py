@@ -100,12 +100,12 @@ class WeightLearner:
         }
 
         for a,v in self.w_unigram.items():
-            scores[a] *= v**(0.0/5)
+            scores[a] *= v**(1.0/3)
         for a,v in self.w_bigram[parent].items():
-            scores[a] *= v**(5.0/5)
+            scores[a] *= v**(1.0/3)
         for r in resources:
-            for a,v in self.w_resources[r].items():
-                scores[a] *= v**((0.0/5)/len(resources))
+            for a,v in self.w_resource[r].items():
+                scores[a] *= v**((1.0/3)/len(resources))
 
         scores = normalize(scores)
         return scores
