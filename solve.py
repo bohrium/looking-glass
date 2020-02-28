@@ -17,7 +17,7 @@ from vis import str_from_grids, render_color
 
 def evaluate_tree(tree, resources):
     if type(tree)==type(''):
-        rtrn = resources[tree]
+        rtrn = resources[tree][0] # get implementation instead of type
         if type(rtrn)==type('') and (rtrn in resources):
             rtrn = evaluate_tree(rtrn, resources)
         return rtrn
@@ -25,7 +25,7 @@ def evaluate_tree(tree, resources):
         for (var_nm, var_type), body in tree.items():
             return (lambda x:
                 evaluate_tree(body, {
-                    k:v for k,v in list(resources.items())+[(var_nm, x)]
+                    k:v for k,v in list(resources.items())+[(var_nm, (x, var_type))]
                 })
             )
     else:
@@ -50,12 +50,12 @@ if __name__=='__main__':
     for k,v in sorted(predictions.items(), reverse=True, key=lambda xy: xy[1]):
         print(CC+'@R {} @G {}'.format(k,v))
 
-    #print(CC+'sampling from @P {}@D ...'.format(CODE_FILE_NM))
-    #primitives = PrimitivesWrapper().primitives
-    #while True:
-    #   try:
-    #       x,y = evaluate_tree(t, primitives)
-    #       print(CC+str_from_grids([x.colors, y.colors], render_color))
-    #       break
-    #   except InternalError:
-    #       continue
+    print(CC+'sampling from @P {}@D ...'.format(CODE_FILE_NM))
+    primitives = PrimitivesWrapper().primitives
+    while True:
+       try:
+           x,y = evaluate_tree(t, primitives)
+           print(CC+str_from_grids([x.colors, y.colors], render_color))
+           break
+       except InternalError:
+           continue

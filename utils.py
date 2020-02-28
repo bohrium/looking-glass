@@ -52,7 +52,7 @@ class Colorizer(object):
             '@O ': '\033[38;2;224;128;000m',  # color: orange 
             '@Y ': '\033[38;2;255;224;000m',  # color: yellow
 
-            '@G ': '\033[38;2;128;224;000m',  # color: green
+            '@G ': '\033[38;2;064;224;000m',  # color: green
             '@F ': '\033[38;2;000;224;000m',  # color: forest
             '@C ': '\033[38;2;000;192;192m',  # color: cyan
 
