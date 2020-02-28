@@ -199,67 +199,71 @@ class PrimitivesWrapper:
         lg_type = goal.frm(goal).frm(goal).frm(tInt)
         impl = lambda c: lambda t: lambda f: t if c else f
         self.primitives[name] = (impl, lg_type)
+
     def __make_eq__(self, source):
         name = 'eq<{}>'.format(source)
         lg_type = tInt.frm(source).frm(source)
-        impl = lambda a: lambda b: a==b
+        impl = lambda a: lambda b: 1 if a==b else 0
         self.primitives[name] = (impl, lg_type)
 
-    @sm(tInt)
-    def negate(a): return not a
+    @sm(tInt.frm(tInt))
+    def negate(a): return 1-a
 
     @sm(tInt.frm(tInt).frm(tInt))
-    def lt_int(a, b): return a<b
+    def less_than(a, b): return 1 if a<b else 0
+
+    @sm(tInt.frm(tInt).frm(tInt))
+    def at_most(a, b): return 1 if a<=b else 0
 
     @sm(tInt.frm(tShape).frm(tShape))
     def eq_C_shape_J_(lhs, rhs):
-        return (
+        return 1 if (
             lhs.shape==rhs.shape
             and np.sum(np.abs(lhs-rhs))==0
-        )
+        ) else 0
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~~ 1.1 Basic Constructors  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-    @sm(tInt)
+    @sm(tNoise)
     def noise(): return None
-    @sm(tInt)
+    @sm(tInt.frm(tNoise))
     def afew(noise): return  2+geometric(0.25)
-    @sm(tInt)
+    @sm(tInt.frm(tNoise))
     def many(noise): return 10+geometric(2.50)
-    @sm(tInt)
+    @sm(tColor.frm(tNoise))
     def rainbow(noise): return uniform(GENERIC_COLORS)
-    @sm(tInt)
+    @sm(tGrid.frm(tInt).frm(tInt))
     def new_grid(h, w): return Grid(h,w)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~~ 1.2 Explicit Shapes and Sprites  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-    @sm(tInt)
+    @sm(tShape)
     def small_square(): return PrimitivesWrapper.make_square(3) 
-    @sm(tInt)                                                     
+    @sm(tShape)                                                     
     def small_plus  (): return PrimitivesWrapper.make_plus  (3) 
-    @sm(tInt)                                                     
+    @sm(tShape)                                                     
     def small_times (): return PrimitivesWrapper.make_times (3) 
-    @sm(tInt)                                                     
+    @sm(tShape)                                                     
     def large_square(): return PrimitivesWrapper.make_square(5) 
-    @sm(tInt)                                                     
+    @sm(tShape)                                                     
     def large_plus  (): return PrimitivesWrapper.make_plus  (5) 
-    @sm(tInt)                                                     
+    @sm(tShape)                                                     
     def large_times (): return PrimitivesWrapper.make_times (5) 
 
-    @sm(tInt)
+    @sm(tShape)
     def make_square(side):
         shape = np.ones((side, side))
         return shape
-    @sm(tInt)
+    @sm(tShape)
     def make_plus(side):
         shape = np.zeros((side, side))
         for i in range(side):
             shape[i,side//2] = 1
             shape[side//2,i] = 1
         return shape
-    @sm(tInt)
+    @sm(tShape)
     def make_times(side):
         shape = np.zeros((side, side))
         for i in range(side):
@@ -270,23 +274,23 @@ class PrimitivesWrapper:
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~~ 1.3 Measuring and Moving  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-    @sm(tInt)
+    @sm(tCell.frm(tShape))
     def center(shape): return (shape.shape[0]//2, shape.shape[1]//2)
-    @sm(tInt)
+    @sm(tInt.frm(tShape))
     def volume(shape): return np.sum(shape)
-    @sm(tInt)
+    @sm(tCell.frm(tDir).frm(tCell))
     def displace(cell, offset):
         return tuple(cell[i]+offset[i] for i in range(2))
 
-    @sm(tInt)
+    @sm(tInt.s().frm(tGrid))
     def columns(grid): return list(range(grid.W))
-    @sm(tInt)
+    @sm(tInt.s().frm(tGrid))
     def rows(grid): return list(range(grid.H))
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~~ 1.4 Rendering  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-    @sm(tInt)
+    @sm(tGrid.frm(tColor).frm(tShape))
     def monochrome(shape, color):
         G = Grid(H=shape.shape[0], W=shape.shape[1])
         G.colors = np.array([
@@ -294,39 +298,43 @@ class PrimitivesWrapper:
             for row in shape
         ]) 
         return G
-    @sm(tInt)
+    @sm(tShape.frm(tGrid))
     def silouhette(grid):
         return np.array([
             [1 if el!='K' else 0 for el in row]
             for row in grid.colors
         ])
 
-    @sm(tInt)
-    def reserve_shape(grid, shape, cell_in_shape):
+    @sm(tPtdGrid.frm(tCell).frm(tShape).frm(tGrid).frm(tNoise))
+    def reserve_shape(noise, grid, shape, cell_in_shape):
         new_grid = grid.copy()
         cell = new_grid.reserve_shape(shape, cell_in_shape, spacious=True)
         return (new_grid, cell) 
 
-    @sm(tInt)
+    @sm(tGrid.frm(tCell).frm(tCell).frm(tGrid).frm(tGrid))
     def paint_sprite(field, sprite, cell_in_field, cell_in_sprite):
         new_grid = field.copy()
         new_grid.paint_sprite(sprite, cell_in_field, cell_in_sprite)
         return new_grid
-    @sm(tInt)
+    @sm(tGrid.frm(tColor).frm(tCell).frm(tGrid))
     def paint_cell(field, cell_in_field, color):
         new_grid = field.copy()
         new_grid.paint_cell(cell_in_field, color)
         return new_grid
 
-    @sm(tInt)
-    def reserve_and_paint_sprite(field, sprite, cell_in_sprite):
-        new_grid, cell_in_field = reserve_shape(grid, silouhette(sprite), cell_in_sprite) 
+    @sm(tGrid.frm(tCell).frm(tGrid).frm(tGrid).frm(tNoise))
+    def reserve_and_paint_sprite(noise, field, sprite, cell_in_sprite):
+        new_grid, cell_in_field = reserve_shape(
+            grid, silouhette(sprite), cell_in_sprite, noise
+        ) 
         return paint_sprite(new_grid, sprite, cell_in_field, cell_in_sprite)
  
 if __name__=='__main__':
+    NB_LINES_PER_FETCH = 25
     P = PrimitivesWrapper()
-    for i, (p_nm, (p_impl, p_type)) in enumerate(P.primitives.items()):
-        print(CC+'@O {} @D : @P {} @D '.format(p_nm, str(p_type)))
-        if 20<=i<len(P.primitives):
-            print(CC+'and so on ...')
-            break
+    print(CC+'@G here are our arc primitives! @D ')
+    for i, (p_nm, (p_impl, p_type)) in enumerate(sorted(P.primitives.items())):
+        head, type_params = (lambda _: (p_nm[:_], p_nm[_:]) if _!=-1 else (p_nm, ''))(p_nm.find('<'))
+        print(CC+'@O {}@G {}@D : @P {} @D '.format(head, type_params, str(p_type)))
+        if (i+1)%NB_LINES_PER_FETCH: continue
+        input(CC+'show next {} primitives?'.format(NB_LINES_PER_FETCH))
