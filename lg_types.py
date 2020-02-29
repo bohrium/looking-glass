@@ -19,7 +19,7 @@ class LGType:
     #~~~~~~~~~  0.0 Constructors  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
     def __init__(self, kind, **kwargs):
-        pre(kind in ['base', 'mset', 'from', 'prod'],
+        pre(kind in ['base', 'mset', 'from'],
             'unknown kind `{}`'.format(kind)
         ) 
         self.kind = kind
@@ -30,18 +30,12 @@ class LGType:
             self.arg  = kwargs['arg'] 
         elif self.kind == 'mset':
             self.child = kwargs['child'] 
-        #elif self.kind == 'prod':
-        #    self.fst = kwargs['fst'] 
-        #    self.snd = kwargs['snd'] 
 
     def frm(self, rhs):
         return LGType('from', out=self, arg=rhs)
 
     def s(self):
         return LGType('mset', child=self)
-
-    #def times(self, rhs):
-    #    return LGType('prod', fst=self, snd=rhs)
 
     def __eq__(self, rhs):
         return repr(self)==repr(rhs)
@@ -54,17 +48,13 @@ class LGType:
             return self.name
         elif self.kind=='from':
             return '{} <- {}'.format(
-                ('({})' if self.out.kind in ('prod') else '{}').format(
-                    repr(self.out)
-                ),
-                ('({})' if self.arg.kind in ('from', 'prod') else '{}').format(
+                repr(self.out),
+                ('({})' if self.arg.kind=='from' else '{}').format(
                     repr(self.arg)
                 )
             )
         elif self.kind=='mset':
             return '{{{}}}'.format(repr(self.child))
-        elif self.kind=='prod':
-            return '{} x {}'.format(repr(self.fst), repr(self.snd))
 
     def __str__(self):   
         if self.kind=='base':
@@ -88,8 +78,6 @@ class LGType:
                 for conseqs, hypoths in self.out.conseq_hypoth_pairs()
             ]
         if self.kind=='mset': return [([self], [])]
-        #if self.kind=='prod':
-        #    return [(self.fst.conseqs()+self.snd.conseqs(), [])]
 
 #=============================================================================#
 #=====  1. ACTUAL LG TYPES  ==================================================#

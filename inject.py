@@ -111,22 +111,6 @@ class DepValue:
     def __eq__(self, rhs):
         return repr(self)==repr(rhs)
 
-    #def union(self, rhs):
-    #    if self.kind=='base':
-    #        return DepValue(self.kind,
-    #            members=self.members.union(rhs.members)
-    #        )
-    #    elif self.kind=='pair':
-    #        return DepValue(self.kind,
-    #            self.fst.union(rhs.fst),
-    #            self.snd.union(rhs.snd)
-    #        )
-    #    elif self.kind=='from':
-    #        return DepValue(self.kind,
-    #            call_on = lambda x:
-    #                self.call_on(x).union(rhs.call_on(x)),
-    #        )
-
 tBase = DepType('base')
 
 def base(*args):
@@ -209,7 +193,8 @@ if __name__=='__main__':
         'rac1': tBase.frm(tBase),
         'cow': tBase,
         'mix': tBase.frm(tBase.pair(tBase)),
-        'mmix': (tBase.pair(tBase)).frm(tBase.pair(tBase)).frm(tBase.pair(tBase))
+        'mmix': (tBase.pair(tBase)).frm(tBase.pair(tBase)).frm(tBase.pair(tBase)),
+        'mymap': (tBase.pair(tBase)).frm(tBase.frm(tBase)).frm(tBase.pair(tBase)),
     }
     environ = {
         k: v.build()
@@ -222,22 +207,6 @@ if __name__=='__main__':
             (
                 ['MORE_NOISE'],
                 base('MORE_NOISE')
-            ),
-            (
-                [
-                    'rac3',
-                    [{('x', tBase): 'cow'}, 'MORE_NOISE'],
-                    'NOISE',
-                    'cow'
-                ],
-                base('NOISE')
-            ),
-            (
-                [
-                    {('x', tBase): {('y', tBase): ['rac2', 'x', 'y']}},
-                    'MORE_NOISE', 'NOISE'
-                ],
-                base('NOISE', 'MORE_NOISE')
             ),
             (
                 [
@@ -264,21 +233,21 @@ if __name__=='__main__':
                 ['fst', ['pair', 'MORE_NOISE', 'NOISE']],
                 base('MORE_NOISE')
             ),
-        ],
-        'blackbox primitives': [
             (
-                ['mix', ['pair', 'NOISE', 'NOISE']],
-                base('NOISE')
-            ),
-            (
-                ['mmix',
-                    ['pair', 'NOISE', 'NOISE'],
-                    ['pair', 'MORE_NOISE', 'NOISE']
+                [
+                    {('f',tBase.frm(tBase)):
+                        {('p',tBase.pair(tBase)):
+                            ['pair', 
+                                ['f', ['fst', 'p']],
+                                ['f', ['snd', 'p']],
+                            ]
+                        }
+                    },
+                    {('x', tBase): 'NOISE'},
+                    ['pair', 'MORE_NOISE', 'cow']
                 ],
-                base('NOISE', 'MORE_NOISE').pair(base('NOISE', 'MORE_NOISE'))
+                base('NOISE').pair(base('NOISE'))
             ),
-        ],
-        'products of functions': [
             (
                 [
                     ['fst', ['pair',
@@ -288,16 +257,6 @@ if __name__=='__main__':
                     ['MORE_NOISE']
                 ],
                 base('NOISE')
-            ),
-            (
-                [
-                        ['snd', ['pair',
-                            {('x', tBase.pair(tBase)): ['fst', 'x']},
-                            {('x', tBase.pair(tBase)): ['snd', 'x']},
-                        ]],
-                        ['pair', 'NOISE', 'MORE_NOISE']
-                ],
-                base('MORE_NOISE')
             ),
             (
                 [
@@ -315,6 +274,42 @@ if __name__=='__main__':
                     'cow'
                 ],
                 base('MORE_NOISE').pair(base())
+            ),
+        ],
+        'blackbox primitives': [
+            (
+                [
+                    'rac3',
+                    [{('x', tBase): 'cow'}, 'MORE_NOISE'],
+                    'NOISE',
+                    'cow'
+                ],
+                base('NOISE')
+            ),
+            (
+                [
+                    {('x', tBase): {('y', tBase): ['rac2', 'x', 'y']}},
+                    'MORE_NOISE', 'NOISE'
+                ],
+                base('NOISE', 'MORE_NOISE')
+            ),
+            (
+                ['mix', ['pair', 'NOISE', 'NOISE']],
+                base('NOISE')
+            ),
+            (
+                ['mmix',
+                    ['pair', 'NOISE', 'NOISE'],
+                    ['pair', 'MORE_NOISE', 'NOISE']
+                ],
+                base('NOISE', 'MORE_NOISE').pair(base('NOISE', 'MORE_NOISE'))
+            ),
+            (
+                ['mymap',
+                    ['pair', 'NOISE', 'MORE_NOISE'],
+                    'rac1',
+                ],
+                base('NOISE', 'MORE_NOISE').pair(base('NOISE', 'MORE_NOISE'))
             ),
         ],
     }
