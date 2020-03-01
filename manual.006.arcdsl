@@ -11,10 +11,10 @@ fold<int><gridpair> (rows blank) (pair<gridpair> blank blank)
         )
     )(
         pair<gridpair> (
-            split<nmbrdcolors><grid> (
+            split<{nmbrdcolor}><grid> (
             map<int><nmbrdcolor> (columns blank) \c:int -> (
                 pair<nmbrdcolor> c (rainbow noise)
-            )) \intcolors:nmbrdcolors -> (
+            )) \intcolors:{nmbrdcolor} -> (
                 fold<nmbrdcolor><grid> intcolors (fst<gridpair> xy)
                 \intcolor:nmbrdcolor -> \x:grid -> ( 
                     paint_cell x (pair<cell> row (fst<nmbrdcolor> intcolor))
