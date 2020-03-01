@@ -35,7 +35,8 @@ class Parser:
     '''
 
     ALPHA = 'abcdefghijklmnopqrstuvwxyz'
-    ALPHA_NUM = 'abcdefghijklmnopqrstuvwxyz_<>0123456789'
+    ALPHA_NUM = 'abcdefghijklmnopqrstuvwxyz_0123456789'
+    BRACKETS = '<>'
 
     def __init__(self, string):
         self.string = string
@@ -68,11 +69,13 @@ class Parser:
         self.i+=len(s)
         self.skip_space()
 
-    def get_identifier(self): 
+    def get_identifier(self, parameterized=False): 
         '''
         '''
+        chars = Parser.ALPHA_NUM + (Parser.BRACKETS if parameterized else '') 
+
         old_i = self.i
-        while self.peek() in Parser.ALPHA_NUM: self.march()
+        while self.peek() in chars: self.march()
         nm = self.string[old_i:self.i]
         self.skip_space()
         return nm 
@@ -114,7 +117,7 @@ class Parser:
             self.match(')')
         elif self.peek()=='\\':
             self.match('\\')
-            var_nm = self.get_identifier()
+            var_nm = self.get_identifier(parameterized=True)
             self.match(':')
             t = self.get_type()
             self.match('->')
@@ -129,4 +132,10 @@ class Parser:
 if __name__=='__main__':
     code = '(map_over my_elts (\\elt:int -> (plus elt five)))'
     tree = Parser(code).get_tree()
-    print(tree)
+    print(CC + 'from code @P {} @D we find tree @O {} @D '.format(code, tree))
+
+    code = '(map_over my_counters (\\f:int<-{int} -> \\xs:{int} -> (f (wrap (f xs)))))'
+    tree = Parser(code).get_tree()
+    print(CC + 'from code @P {} @D we find tree @O {} @D '.format(code, tree))
+
+
