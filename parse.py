@@ -1,28 +1,42 @@
 ''' author: samtenka
-    change: 2020-02-26
+    change: 2020-03-01
     create: 2019-02-26
-    descrp: translate textual code to python function or program tree 
-    to use: get tree of some textual code as follows:
+    descrp: Translate textual code to python function or program tree. 
+    to use: Obtain the tree of some text `code` as follows:
+
                 from parse import Parser
                 tree = Parser(code).get_tree()
+
+            We use a light-weight representation of trees (in terms of Python's
+            built-in types instead of a new class): strings name atoms; lists
+            represent potentially-multiple application; and single-item
+            dictionaries represent lambdas, where the key is a tuple giving the
+            name and type of the introduced variable and value is the lambda
+            body.  For example, the following LISP style text:
+
+                (map_over my_elts (\elt:int -> (plus elt five)))
+
+            would be parsed into the following tree (a Python object):
+
+                ['map_over',
+                 'my_elts',
+                  {('elt', tInt): ['plus', 'elt', 'five']}
+                ]
 '''
 
 import numpy as np
 
-from utils import ARC_path, InternalError
-from utils import CC, pre                               # ansi
-from utils import secs_endured, megs_alloced            # profiling
-from utils import reseed, bernoulli, geometric, uniform # math
+from utils import CC, pre   # ansi
 
-from shape import ShapeGen 
-from block import GENERIC_COLORS, Block, block_equals
-from grid import Grid
-
-from vis import str_from_grids, render_color
-
-from lg_types import tInt, tCell, tColor, tBlock, tGrid 
+from lg_types import TS
 
 class Parser:
+    '''
+    '''
+
+    ALPHA = 'abcdefghijklmnopqrstuvwxyz'
+    ALPHA_NUM = 'abcdefghijklmnopqrstuvwxyz_<>0123456789'
+
     def __init__(self, string):
         self.string = string
         self.i=0
@@ -30,31 +44,70 @@ class Parser:
     def get_tree(self):
         self.skip_space()
         tree = self.get_term()
-        pre(self.at_end(), 'unable to parse whole string'+'#{}#'.format(self.string[self.i:]))
+        pre(self.at_end(),
+            'parsing failure near: ...@G {}@R {}...'.format(
+                self.string[:self.i][-50:],
+                self.string[self.i:][:50]
+            )
+        )
         return tree
 
     def at_end(self):
         return self.i==len(self.string)
     def peek(self):
         return self.string[self.i] if self.i!=len(self.string) else '\0'
-    def match(self, s):
-        assert self.string[self.i:self.i+len(s)]==s
-        self.i+=len(s)
     def march(self):
         self.i+=1
     def skip_space(self):
         while not self.at_end() and (self.peek() in ' \n'):
             self.march()
+    def match(self, s):
+        ''' matches then skips space'''
+        prefix = self.string[self.i:][:len(s)]
+        pre(prefix==s, 'expected `{}` but saw `{}`'.format(s, prefix))
+        self.i+=len(s)
+        self.skip_space()
 
     def get_identifier(self): 
+        '''
+        '''
         old_i = self.i
-        while self.peek() in 'abcdefghijklmnopqrstuvwxyz_<>0123456789': self.march()
-        return self.string[old_i:self.i]
+        while self.peek() in Parser.ALPHA_NUM: self.march()
+        nm = self.string[old_i:self.i]
+        self.skip_space()
+        return nm 
+
+    def get_type(self): 
+        t = self.get_hypothesis_free_type()
+        while self.peek() == '<':
+            self.match('<-')
+            hypo = self.get_hypothesis_free_type() 
+            t = t.frm(hypo)
+        return t 
+
+    def get_hypothesis_free_type(self): 
+        '''
+        '''
+        if self.peek()=='{':
+            self.match('{')
+            t = self.get_type().s()
+            self.match('}')
+        elif self.peek()=='(':
+            self.match('(')
+            t = self.get_type()
+            self.match(')')
+        elif self.peek() in Parser.ALPHA:
+            nm = self.get_identifier()
+            t = TS.base_types_by_nm[nm]
+        else:
+            pre(False, 'unknown symbol when parsing type!')
+        return t
 
     def get_term(self): 
+        '''
+        '''
         if self.peek()=='(':
             self.match('(')
-            self.skip_space()
             tree = [self.get_term()]
             while self.peek()!=')': 
                 tree.append(self.get_term())
@@ -62,20 +115,18 @@ class Parser:
         elif self.peek()=='\\':
             self.match('\\')
             var_nm = self.get_identifier()
-            self.skip_space()
             self.match(':')
-            self.skip_space()
-            type_nm = self.get_identifier()
-            self.skip_space()
+            t = self.get_type()
             self.match('->')
-            self.skip_space()
             body = self.get_term() 
-            tree = {(var_nm, type_nm):body} 
-        elif self.peek() in 'abcdefghijklmnopqrstuvwxyz':
+            tree = {(var_nm, t):body} 
+        elif self.peek() in Parser.ALPHA:
             tree = self.get_identifier()
         else:
-            pre(False, 'unknown character #{}#'.format(self.peek()))
-
-        self.skip_space()
+            pre(False, 'unknown character `{}`'.format(self.peek()))
         return tree
 
+if __name__=='__main__':
+    code = '(map_over my_elts (\\elt:int -> (plus elt five)))'
+    tree = Parser(code).get_tree()
+    print(tree)

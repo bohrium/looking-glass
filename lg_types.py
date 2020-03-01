@@ -1,13 +1,25 @@
 ''' author: samtenka
-    change: 2020-02-25
+    change: 2020-03-01
     create: 2020-02-11
     descrp: a type ontology for the looking glass dsl
-    to use: import
-                from lg_types import tInt, tCell, tColor, tBlock, tGrid 
-                from lg_types import tCount_, tFilter_, tArgmax_, tMap_
+    to use: To use named types and type constructors, import:
+
+                from lg_types import (
+                    tNoise, tInt, tColor, tShape, tGrid, tCell, tDir, tBlock,
+                    tClrdCell, tNmbrdColor, tNmbrdBlock, tPtdGrid, tGridPair 
+                )
+                from lg_types import (
+                    TPred_, tRepeat_, tCount_, tLen_, tFilter_, tArgmax_,
+                    tMap_, TBinop_
+                )
+
+            For meta-data on types, query TS (an instance of LGTypeSystem):
+
+                from lg_types import TS 
+                TS.product_decomposition[tPtdGrid]  #   == (tGrid, tCell)
 '''
 
-from utils import pre
+from utils import pre, CC   # ANSI
 
 #=============================================================================#
 #=====  0. IMPLEMENTATION OF RECORD STRUCTURE FOR LG TYPES  ==================#
@@ -69,7 +81,6 @@ class LGType:
 
     def conseq_hypoth_pairs(self):
         '''
-        TODO: add constructor names (fst, snd) for product?
         '''
         if self.kind=='base': return [([self], [])]
         if self.kind=='from':
@@ -80,29 +91,53 @@ class LGType:
         if self.kind=='mset': return [([self], [])]
 
 #=============================================================================#
-#=====  1. ACTUAL LG TYPES  ==================================================#
+#=====  1. CLASS FOR TYPE SYSTEM  ============================================#
+#=============================================================================#
+
+class LGTypeSystem:
+    def __init__(self):
+        self.base_types_by_nm = {}
+        self.product_decompositions = {}
+
+    def add_base(self, name): 
+        new_type = LGType('base', name=name)
+        self.base_types_by_nm[name] = new_type
+        return new_type
+
+    def add_product(self, name, fst, snd): 
+        new_type = self.add_base(name)
+        self.product_decompositions[new_type] = (fst, snd) 
+        return new_type
+
+#=============================================================================#
+#=====  2. ACTUAL LG TYPES  ==================================================#
 #=============================================================================#
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~  1.0 Base Types  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~  2.0 Atomic Types  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-tNoise          = LGType('base', name='noise')
-tInt            = LGType('base', name='int')
-tColor          = LGType('base', name='color')
-tShape          = LGType('base', name='shape')
-tGrid           = LGType('base', name='grid')
+TS = LGTypeSystem() 
 
-tCell           = LGType('base', name='cell')  # (int, int)
-tDir            = LGType('base', name='dir')   # (int, int) 
-tNmbrdColor     = LGType('base', name='nmbrdcolor')
-tNmbrdBlock     = LGType('base', name='nmbrdblock')
-tBlock          = LGType('base', name='block') # (shape, color)
-tClrdCell       = LGType('base', name='clrdcell')
-tPtdGrid        = LGType('base', name='ptdgrid')
-tGridPair       = LGType('base', name='gridpair')
+tNoise = TS.add_base('noise')
+tInt   = TS.add_base('int')
+tColor = TS.add_base('color')
+tShape = TS.add_base('shape')
+tGrid  = TS.add_base('grid')
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~  1.2 Templates for Fake Polymorphism  ~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~  2.1 Named Product Types  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+tCell           = TS.add_product('cell', tInt  , tInt  )
+tDir            = TS.add_product('cell', tInt  , tInt  )
+tBlock          = TS.add_product('cell', tShape, tColor)
+tClrdCell       = TS.add_product('cell', tCell , tColor)
+tNmbrdColor     = TS.add_product('cell', tInt  , tColor)
+tNmbrdBlock     = TS.add_product('cell', tBlock, tInt  )
+tPtdGrid        = TS.add_product('cell', tGrid , tCell )
+tGridPair       = TS.add_product('cell', tGrid , tGrid )
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~  2.2 Templates for Fake Polymorphism  ~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 tPred_   = lambda t:   tInt.frm(t)
 tRepeat_ = lambda t:   t.s().frm(tInt)
@@ -114,15 +149,19 @@ tMap_    = lambda t,u: t.s().frm(t.frm(u)).frm(u.s())
 tBinop_  = lambda t:   t.frm(t).frm(t)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~  1.3 Examples of Display  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~  2.3 Examples of Display  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 if __name__ == '__main__':
-    #print('colored block  \t', tBlock.times(tColor))
-    print('blocks         \t', repr(tBlock.s()))
-    print('decompose block\t', repr(tCell.s().frm(tBlock)))
-    print('count cells    \t', repr(tCount_(tCell)))
-    print('argmax blocks  \t', repr(tArgmax_(tBlock)))
-    print('filter blocks  \t', repr(tFilter_(tBlock)))
-    print('map            \t', repr(tMap_(tColor,tBlock)))
-    print('classify color \t', repr(tPred_(tColor)))
-    print('binop on grids \t', repr(tBinop_(tGrid)))
+    types_by_nm = {
+    	'shapes'            :	tShape.s()              ,
+    	'decompose shape'   :	tCell.s().frm(tShape)   , # TODO: implement in resources
+    	'count cells'       :	tCount_(tCell)          ,
+    	'argmax shapes'     :	tArgmax_(tShape)        ,
+    	'filter blocks'     :	tFilter_(tBlock)        ,
+    	'map'               :	tMap_(tColor,tGrid)     ,
+    	'classify color'    :	tPred_(tColor)          ,
+    	'binop on grids'    :	tBinop_(tGrid)         	,
+    }
+    for nm, lg_type in types_by_nm.items():
+        print(CC+'{} @O {} @D '.format(nm.ljust(20), repr(lg_type)))
+
