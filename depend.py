@@ -10,20 +10,41 @@
             and
                 (fst (pair a b))    depends on          (pair a b)
             In other words, we outperform naive transitive closure. 
-    to use: 
+    to use: To analyze a program tree, write
+
+                from depend import DepAnalyzer
+                DA = DepAnalyzer(sensitives, sigs_by_nm)
+                dependency_value = DA.abstract_eval(tree)
+                is_dependent = dependency_value.query('my_noise_6') 
+
+            Above, `sensitives` is a set of strings representing the names of
+            leaves on which our output might depend, and `sigs_by_nm` is a
+            dictionary that sends leaf names to their abstract types (see
+            DepType).  (Every non-noise leaf name must be mentioned in
+            `sigs_by_nm` and every noise leaf name must be mentioned in
+            `sensitives`.)  Here, the set is assumed to contain 'my_noise_6',
+            and the last line above finds out whether or not the value can
+            depend on that leaf after all.
+                
+            Often, the output type of the program tree will be structured as
+            a pair; we may query the resulting fine-grained dependencies as
+            follows: 
+
+                fst_is_dependent = dependency_value.fst.query('my_noise_6') 
+                snd_is_dependent = dependency_value.snd.query('my_noise_6') 
+
+
             To demonstrate verbosely on some artificial trees, run
+
                 python depend.py -v 
+
             Remove that flag for non-verbose testing. 
-    issues:
 '''
 
 import sys
 import types
 
-from utils import InternalError # maybe
 from utils import CC, pre       # ansi
-
-from vis import str_from_grids, render_color
 
 #=============================================================================#
 #=====  0. TYPE OF DEPENDENCY VALUES  ========================================#
@@ -113,6 +134,9 @@ class DepValue:
             fst=self,
             snd=rhs
         )
+
+    def query(self, leaf):
+        return leaf in self.squash().members 
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~  1.1 Recursive Union Operators  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -618,17 +642,17 @@ if __name__=='__main__':
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~  3.5 Analysis-and-Display Loop  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-    IA = DepAnalyzer(sensitives, sigs_by_nm, verbose=verbose)
+    DA = DepAnalyzer(sensitives, sigs_by_nm, verbose=verbose)
 
     print()
     for test_nm, pairs in test_collections_by_theme.items():
         print(CC+'@R --- TESTING {} ---@D '.format(test_nm))
-        for tree, dependency_set in pairs:
-            print(CC+'analyze tree @P {}@D : expect deps @O {}@D '.format(
-                tree, dependency_set
+        for tree, dependency_value in pairs:
+            print(CC+'expect deps @O {} @D from tree @P {}@D '.format(
+                dependency_value, tree
             ))
-            predicted = IA.abstract_eval(tree)
-            pre(predicted==dependency_set, 'failed test!')
+            predicted = DA.abstract_eval(tree)
+            pre(predicted==dependency_value, 'failed test!')
             print(CC+'@G passed!@D ')
     
     print('all tests executed!\n')

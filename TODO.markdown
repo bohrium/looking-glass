@@ -68,5 +68,8 @@ obtain further trees while introducing new primitives
  [] functionalize 10 medium tasks
 
 injectivity analysis
- [] plan out
+ >< plan out
+ [] convergence check so that rollout unneeded (subtle: need to check
+    convergence across all tree nodes!!
+
 
