@@ -1,5 +1,5 @@
 ''' author: samtenka
-    change: 2020-02-29
+    change: 2020-03-01
     create: 2019-06-12
     descrp: Helpers for ANSI screen coloration, resource profiling, math,
             maybe types, and project paths.
@@ -102,7 +102,7 @@ def pre(condition, message):
 try:
     import memory_profiler
 except ImportError:
-    print(CC + '@R failed attempt to import `memory_profiler` @D ')
+    print(CC + '@O failed attempt to import `memory_profiler` @D ')
 
 #---------------------  1.0.1 set memory profiler  ---------------------------#
 

@@ -35,7 +35,8 @@ class Parser:
     '''
 
     ALPHA = 'abcdefghijklmnopqrstuvwxyz'
-    ALPHA_NUM = 'abcdefghijklmnopqrstuvwxyz_0123456789'
+    ALPHA = ALPHA + ALPHA.upper()
+    ALPHA_NUM = ALPHA + '_0123456789'
     BRACKETS = '<>'
 
     def __init__(self, string):

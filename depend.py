@@ -280,7 +280,7 @@ class DepAnalyzer:
         #-------------  2.1.0 tree is a leaf  --------------------------------#
 
         elif type(tree) == str:
-            if tree in sensitives:
+            if tree in self.sensitives:
                 return base(tree)
             elif tree in environ:
                 return self.abstract_eval(environ[tree], environ, depth+1)

@@ -69,12 +69,13 @@ class LGType:
             return '{{{}}}'.format(repr(self.child))
 
     def __str__(self):   
-        if self.kind=='base':
-            return self.name
-        elif self.kind=='from':
-            return '{}_by_{}'.format(str(self.out), str(self.arg))
-        elif self.kind=='mset':
-            return '{}s'.format(str(self.child))
+        return repr(self)
+        #if self.kind=='base':
+        #    return self.name
+        #elif self.kind=='from':
+        #    return '{}_by_{}'.format(str(self.out), str(self.arg))
+        #elif self.kind=='mset':
+        #    return '{}s'.format(str(self.child))
 
     def __hash__(self):
         return hash(repr(self))
