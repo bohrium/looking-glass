@@ -1,5 +1,5 @@
 ''' author: samtenka
-    change: 2020-02-28
+    change: 2020-03-01
     create: 2020-02-16
     descrp: generate a script of type grid x grid <-- noise
     to use: type
@@ -184,6 +184,7 @@ if __name__=='__main__':
                 break
             except InternalError:
                 continue
+
 
 
 
