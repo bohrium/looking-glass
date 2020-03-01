@@ -133,8 +133,8 @@ class Grid:
         rrr,ccc = shape_cell
         internal_assert(h<=self.H and w<=self.W, 'shape too big to reserve')
         for _ in range(nb_tries):
-            r = uniform(range(rrr,self.H-h+rrr))
-            c = uniform(range(ccc,self.W-w+ccc))
+            r = uniform(range(rrr,self.H-h+rrr+1))
+            c = uniform(range(ccc,self.W-w+ccc+1))
             if not self.shape_in_bounds(shape, r-rrr, c-ccc): continue
             if self.shape_overlaps_occupied(shape, r-rrr, c-ccc): continue
             for dr in range(h):
