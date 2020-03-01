@@ -1,11 +1,16 @@
 ''' author: samtenka
-    change: 2020-02-23
+    change: 2020-02-29
     create: 2019-06-12
-    descrp: helpers for ansi commands, resource profiling, and math
-    to use: import:
-                from utils import CC, pre                       # ansi
-                from utils import secs_endured, megs_alloced    # profiling
-                from utils import reseed, geometric, bernoulli  # math
+    descrp: Helpers for ANSI screen coloration, resource profiling, math,
+            maybe types, and project paths.
+    to use: Import:
+                from utils import CC, pre                           # ansi
+                from utils import secs_endured, megs_alloced        # profiling
+                from utils import reseed, geometric, bernoulli      # math
+                from utils import InternalError, internal_assert    # maybe
+                from utils import ARC_path                          # paths 
+            Or, run as is to see a pretty rainbow:
+                python utils.py
 '''
 
 import functools
@@ -13,16 +18,6 @@ import time
 import sys
 import random
 import numpy as np
-
-ARC_path = '../projects/ARC' 
-
-class InternalError(Exception):
-    def __init__(self, msg):
-        self.msg = msg
-
-def internal_assert(condition, message):
-    if not condition:
-        raise InternalError(message)
 
 #=============================================================================#
 #=====  0. ANSI CONTROL FOR RICH OUTPUT TEXT =================================#
@@ -48,7 +43,7 @@ class Colorizer(object):
             '@A ': '\033[38;2;128;128;128m',  # color: gray  
             '@W ': '\033[38;2;255;255;255m',  # color: white
 
-            '@R ': '\033[38;2;255;000;064m',  # color: red
+            '@R ': '\033[38;2;240;032;032m',  # color: red
             '@O ': '\033[38;2;224;128;000m',  # color: orange 
             '@Y ': '\033[38;2;255;224;000m',  # color: yellow
 
@@ -151,13 +146,33 @@ def geometric(scale):
     return np.random.geometric(1.0/(1.0 + scale)) - 1
 
 #=============================================================================#
-#=====  3. ILLUSTRATE UTILITIES  =============================================#
+#=====  3. SIMULATE MAYBE TYPES VIA EXCEPTIONS  ==============================#
+#=============================================================================#
+
+ARC_path = '../projects/ARC' 
+
+class InternalError(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+def internal_assert(condition, message):
+    if not condition:
+        raise InternalError(message)
+
+#=============================================================================#
+#=====  4. USEFUL PATHS  =====================================================#
+#=============================================================================#
+
+ARC_path = '../projects/ARC' 
+
+#=============================================================================#
+#=====  5. ILLUSTRATE UTILITIES  =============================================#
 #=============================================================================#
 
 if __name__=='__main__':
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-    #~~~~~~~~~  3.0 Display a Rainbow  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+    #~~~~~~~~~  5.0 Display a Rainbow  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
     print(CC + '@D moo')
 
