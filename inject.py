@@ -19,7 +19,7 @@ from utils import CC, pre       # ansi
 from depend import DepAnalyzer, DepType
 from lg_types import TS
 from lg_types import tInt, tColor, tPtdGrid, tGridPair
-from parse import Parser
+from parse import Parser, str_from_tree
 from resources import PrimitivesWrapper
 
 def coarsen_type(lg_type):
@@ -80,6 +80,7 @@ class InjectivityAnalyzer:
             if tree=='noise':
                 tree = 'noise{}'.format(self.nb_noise_vars) 
                 self.nb_noise_vars += 1
+            tree = tree[:] 
             return tree 
         elif type(tree) == list:
             return [self.label_tree(elt) for elt in tree]
@@ -96,6 +97,8 @@ class InjectivityAnalyzer:
         self.reset_noise_count()
         labeled_tree = self.label_tree(lg_tree) 
         coarsened_tree = coarsen_tree(labeled_tree) 
+        if self.verbose:
+            print(CC+'ct: @P {} @D '.format(str_from_tree(coarsened_tree)))
         self.prepare_analyzer()
    
         dependency_value = self.DA.abstract_eval(coarsened_tree)
@@ -110,10 +113,15 @@ class InjectivityAnalyzer:
             syntactic chain to X is fully recoverable from X's value. 
         '''
         _, x_deps, y_deps = self.dependencies_of_pair(lg_tree)
-        print(x_deps, y_deps)
+        print(CC+ 'dependencies @G {} @D and @G {} @D '.format(x_deps, y_deps))
         is_injective = (y_deps.difference(x_deps) == set([]))
-        is_nontrivial = (x_deps != set([])) 
-        return is_injective and is_nontrivial
+        is_nonconstant = (y_deps != set([])) 
+        is_nonidentity = (x_deps.difference(y_deps) != set([]))
+        return (
+            is_injective
+            #and is_nonconstant
+            #and is_nonidentity 
+        )
 
 if __name__=='__main__':
     code = '((\\n:noise -> (pair (mix n noise) (mix n noise))) noise)'

@@ -30,6 +30,42 @@ from utils import CC, pre   # ansi
 
 from lg_types import TS
 
+def get_depth(tree):
+    if type(tree) == str:
+        return 0
+    elif type(tree) == list:
+        return 1+max(get_depth(elt) for elt in tree)
+    elif type(tree) == dict: 
+        for (nm, t), body in tree.items():
+            return 0+max(get_depth(body) for elt in tree)
+
+def str_from_tree_flat(tree):
+    if type(tree) == str:
+        return tree
+    elif type(tree) == list:
+        return '({})'.format(' '.join(map(str_from_tree_flat, tree)))
+    elif type(tree) == dict: 
+        for (nm, t), body in tree.items():
+            return '\\{}:{} -> {}'.format(nm, t, str_from_tree_flat(body)) 
+
+def str_from_tree(tree, depth=0, delim='  '):
+    as_flat = '{}{}\n'.format(delim*depth, str_from_tree_flat(tree))
+    if len(as_flat) < 80:
+        return as_flat
+
+    if type(tree) == str:
+        rtrn = '{}{}\n'.format(delim*depth, tree)
+    elif type(tree) == list:
+        rtrn = '{}(\n'.format(delim*depth)
+        for elt in tree:
+            rtrn += str_from_tree(elt, depth+1)
+        rtrn += '{})\n'.format(delim*depth)
+    elif type(tree) == dict: 
+        for (nm, t), body in tree.items():
+            rtrn = '{}\\{}:{} -> '.format(delim*depth, nm, t) 
+            rtrn += str_from_tree(body, depth+0).lstrip()
+    return rtrn
+
 class Parser:
     '''
     '''
@@ -133,10 +169,14 @@ class Parser:
 if __name__=='__main__':
     code = '(map_over<> my_elts (\\elt:int -> (plus elt five)))'
     tree = Parser(code).get_tree()
-    print(CC + 'from code @P {} @D we find tree @O {} @D '.format(code, tree))
+    print(CC + 'from code @P {} @D we find tree \n@O {} @D '.format(
+        code, str_from_tree(tree)
+    ))
 
     code = '(map_over my_counters (\\f:int<-{int} -> \\xs:{int} -> (f (wrap (f xs)))))'
     tree = Parser(code).get_tree()
-    print(CC + 'from code @P {} @D we find tree @O {} @D '.format(code, tree))
+    print(CC + 'from code @P {} @D we find tree \n@O {} @D '.format(
+        code, str_from_tree(tree)
+    ))
 
 

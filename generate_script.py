@@ -20,7 +20,7 @@ from lg_types import tInt, tCell, tColor, tShape, tBlock, tGrid, tDir, tNoise
 from lg_types import tNmbrdBlock, tBlock, tClrdCell, tPtdGrid, tGridPair       
 from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 
-from parse import Parser
+from parse import Parser, str_from_tree 
 from fit_weights import WeightLearner
 from resources import PrimitivesWrapper
 from solve import evaluate_tree
@@ -143,9 +143,7 @@ if __name__=='__main__':
     for file_nm in CODE_FILE_NMS:
         with open(file_nm) as f:
             code = f.read()
-        tree = Parser(code).get_tree()
-        GS.learn_from(tree)
-
+        GS.learn_from(Parser(code).get_tree())
 
     C = InjectivityAnalyzer(verbose=False)
     print(CC+'@P sampling new program...@D ')
@@ -154,29 +152,37 @@ if __name__=='__main__':
             code = GS.tenacious_construct(tGridPair) 
             P = Parser(code)
             t = P.get_tree()
-            print(CC+'trying... @P {} @D '.format(code))
-            input()
-            if not C.is_interesting(tree):
-                print(CC+'@R uninteresting! @D ')
-                continue
+            try:
+                if not C.is_interesting(t):
+                    print(CC+'@R uninteresting! @D ')
+                    continue
+            except:
+                print(CC+'problem with... \n@P {} @D '.format(str_from_tree(t)))
+                assert False
+
             break
         except TypeError:
             continue
     print(CC+'@O ')
-    print(code)
+    print(CC+'found... \n@P {} @D '.format(str_from_tree(t)))
     print(CC+'@D ')
 
     print(CC+'@P executing program...@D ')
+    input()
     primitives = PrimitivesWrapper().primitives
-    for _ in range(3):
+    for _ in range(2):
         for _ in range(100):
-           try:
-               x,y = evaluate_tree(t, primitives)
-               print(CC+str_from_grids([x.colors, y.colors], render_color))
-               break
-           except InternalError:
-               continue
-           except IndexError:
-               continue
+            try:
+                x0, y0 = evaluate_tree(t, primitives)
+                x1, y1 = evaluate_tree(t, primitives)
+                x2, y2 = evaluate_tree(t, primitives)
+                print(CC+str_from_grids([
+                    x0.colors, y0.colors,
+                    x1.colors, y1.colors,
+                    x2.colors, y2.colors,
+                ], render_color))
+                break
+            except InternalError:
+                continue
 
 

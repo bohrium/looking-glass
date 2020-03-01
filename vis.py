@@ -26,7 +26,7 @@ def str_from_grids(grids, render=render_number):
     ''' Return a colorizable string given a list of (potentially non-uniformly
         shaped) grids of numbers or of colors.
     '''
-    heights, widths = ([g.shape[i] for g in grids] for i in range(2))
+    heights, widths = ([(g.shape[i] if i<len(g.shape) else 0) for g in grids] for i in range(2))
 
     lines = ['' for h in range(2+max(heights))]
     for g, H, W in zip(grids, heights, widths):

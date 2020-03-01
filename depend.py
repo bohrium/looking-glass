@@ -306,36 +306,40 @@ class DepAnalyzer:
 
         elif type(tree) == list:
             head, args = tree[0], tree[1:]
+            poly_head = head if '<' not in head else head[:head.find('<')] 
             eval_child = lambda t: self.abstract_eval(t, environ, depth+1)
     
             #---------  2.1.2 type-refined operators for products  -----------#
 
-            if head=='pair':
+            if poly_head=='pair' and len(args)==2:
                 fst, snd = map(eval_child, args)
                 return fst.pair(snd)
-            elif head=='fst':
+            elif poly_head=='fst' and len(args)==1:
                 pair, = map(eval_child, args)
                 return pair.fst
-            elif head=='snd':
+            elif poly_head=='snd' and len(args)==1:
                 pair, = map(eval_child, args)
                 return pair.snd
 
             #---------  2.1.3 dependence-refined operators  ------------------#
 
-            elif head=='cond':
+            elif poly_head=='split' and len(args)==2:
+                x, f = map(eval_child, args)
+                return f.call_on(x)
+            elif poly_head=='cond' and len(args)==3:
                 cond, if_tru, if_fls = map(eval_child, args)
                 return if_tru.union(if_fls).union_leaf(cond.squash())
-            elif head=='map':
+            elif poly_head=='map' and len(args)==2:
                 elts, func = map(eval_child, args)
                 return func.call_on(elts)
-            elif head=='filter':
+            elif poly_head=='filter' and len(args)==2:
                 pred, elts = map(eval_child, args)
                 return elts.union_leaf(pred.squash())
-            elif head=='repeat':
+            elif poly_head=='repeat' and len(args)==3:
                 reps, init, func = map(eval_child, args)
                 seq = lambda: self.orbit(init, func.call_on) 
                 return init.nested_union(seq).union_leaf(reps.squash())
-            elif head=='fold':
+            elif poly_head=='fold' and len(args)==3:
                 elts, init, func = map(eval_child, args)
                 seq = lambda: self.orbit(init, func.call_on(elts).call_on) 
                 return init.nested_union(seq).union_leaf(elts.squash())
@@ -362,7 +366,7 @@ class DepAnalyzer:
         if not self.verbose: return
         print(CC + '  '*depth +
             ('@D {} @O {} @D from @P {} @D in environ @B {} @D '.format(
-                tag, dst, src, env
+                tag, dst, src, ''#env
             )
         ))
 
