@@ -25,7 +25,7 @@ from fit_weights import WeightLearner
 from resources import PrimitivesWrapper
 from solve import evaluate_tree
 from vis import str_from_grids, render_color
-
+from inject import InjectivityAnalyzer
 
 #=============================================================================#
 #=====  0. PROVER  ===========================================================#
@@ -147,12 +147,18 @@ if __name__=='__main__':
         GS.learn_from(tree)
 
 
+    C = InjectivityAnalyzer(verbose=False)
     print(CC+'@P sampling new program...@D ')
     while True:
         try:
             code = GS.tenacious_construct(tGridPair) 
             P = Parser(code)
             t = P.get_tree()
+            print(CC+'trying... @P {} @D '.format(code))
+            input()
+            if not C.is_interesting(tree):
+                print(CC+'@R uninteresting! @D ')
+                continue
             break
         except TypeError:
             continue

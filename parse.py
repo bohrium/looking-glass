@@ -37,7 +37,7 @@ class Parser:
     ALPHA = 'abcdefghijklmnopqrstuvwxyz'
     ALPHA = ALPHA + ALPHA.upper()
     ALPHA_NUM = ALPHA + '_0123456789'
-    BRACKETS = '<>'
+    BRACKETS = '<>-{}'
 
     def __init__(self, string):
         self.string = string
@@ -118,20 +118,20 @@ class Parser:
             self.match(')')
         elif self.peek()=='\\':
             self.match('\\')
-            var_nm = self.get_identifier(parameterized=True)
+            var_nm = self.get_identifier()
             self.match(':')
             t = self.get_type()
             self.match('->')
             body = self.get_term() 
             tree = {(var_nm, t):body} 
         elif self.peek() in Parser.ALPHA:
-            tree = self.get_identifier()
+            tree = self.get_identifier(parameterized=True)
         else:
             pre(False, 'unknown character `{}`'.format(self.peek()))
         return tree
 
 if __name__=='__main__':
-    code = '(map_over my_elts (\\elt:int -> (plus elt five)))'
+    code = '(map_over<> my_elts (\\elt:int -> (plus elt five)))'
     tree = Parser(code).get_tree()
     print(CC + 'from code @P {} @D we find tree @O {} @D '.format(code, tree))
 

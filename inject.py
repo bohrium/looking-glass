@@ -2,7 +2,12 @@
     change: 2020-03-01
     create: 2019-02-29
     descrp: 
-    to use: 
+    to use: Test whether a tree is injective and non-trivial by: 
+
+                from inject import InjectivityAnalyzer
+                C = InjectivityAnalyzer()
+                if C.is_interesting(tree): ...
+
 '''
 
 import sys
@@ -13,13 +18,14 @@ from utils import CC, pre       # ansi
 
 from depend import DepAnalyzer, DepType
 from lg_types import TS
-from lg_types import tInt, tColor
+from lg_types import tInt, tColor, tPtdGrid, tGridPair
 from parse import Parser
+from resources import PrimitivesWrapper
 
 def coarsen_type(lg_type):
     if lg_type.kind == 'base':
-        if lg_type.name in TS.product_decompositions:  
-            fst, snd = TS.product_decompositions[lg_type.name]
+        if lg_type in TS.product_decompositions:  
+            fst, snd = TS.product_decompositions[lg_type]
             fst = coarsen_type(fst) 
             snd = coarsen_type(snd) 
             return fst.pair(snd)
@@ -47,7 +53,7 @@ def coarsen_tree(tree):
     else:
         pre(False, 'unknown tree type!')
 
-class Coarsener:
+class InjectivityAnalyzer:
     def __init__(self, verbose=False):
         self.verbose = verbose
         self.reset_noise_count()
@@ -58,10 +64,14 @@ class Coarsener:
     def prepare_analyzer(self):
         sensitives = {'noise{}'.format(i) for i in range(self.nb_noise_vars)}
         tBase = DepType('base')
+        #sigs_by_nm = {
+        #    'pair': tBase.pair(tBase).frm(tBase).frm(tBase),
+        #    'mix': tBase.frm(tBase).frm(tBase),
+        #}
+        P = PrimitivesWrapper()
         sigs_by_nm = {
-            'pair': tBase.pair(tBase).frm(tBase).frm(tBase),
-            'mix': tBase.frm(tBase).frm(tBase),
-        }
+            nm:coarsen_type(t) for nm,(impl, t) in P.primitives.items()
+        } 
         self.DA = DepAnalyzer(sensitives, sigs_by_nm, verbose=self.verbose)
 
     def label_tree(self, tree):
@@ -81,7 +91,7 @@ class Coarsener:
         else:
             pre(False, 'unknown tree type!')
 
-    def obstructions_to_injectivity(self, lg_tree, verbose=False): 
+    def dependencies_of_pair(self, lg_tree): 
         # order matters in these 3 lines (stateful due to self.nb_noise_vars):
         self.reset_noise_count()
         labeled_tree = self.label_tree(lg_tree) 
@@ -91,12 +101,27 @@ class Coarsener:
         dependency_value = self.DA.abstract_eval(coarsened_tree)
         x_dependencies = dependency_value.fst.squash() 
         y_dependencies = dependency_value.snd.squash() 
-        return labeled_tree, y_dependencies.difference(x_dependencies)
+        return labeled_tree, x_dependencies, y_dependencies
+
+    def is_interesting(self, lg_tree):
+        ''' For a tree representing a function to a pair type X times Y,  
+            test whether function's support, as a relation between X and Y, 
+            has an injective transpose.  We assume that all noise that has a
+            syntactic chain to X is fully recoverable from X's value. 
+        '''
+        _, x_deps, y_deps = self.dependencies_of_pair(lg_tree)
+        print(x_deps, y_deps)
+        is_injective = (y_deps.difference(x_deps) == set([]))
+        is_nontrivial = (x_deps != set([])) 
+        return is_injective and is_nontrivial
 
 if __name__=='__main__':
     code = '((\\n:noise -> (pair (mix n noise) (mix n noise))) noise)'
     tree = Parser(code).get_tree()
-    C = Coarsener()
-    labeled_tree, obstructions = C.obstructions_to_injectivity(tree)
+    C = InjectivityAnalyzer()
+    labeled_tree, x_deps, y_deps = C.dependencies_of_pair(tree)
     print(CC+'analyzing @P {} @D '.format(labeled_tree))
-    print(CC+'bad dependencies: @O {} @D '.format(obstructions))
+    print(CC+'x depends on: @O {} @D '.format(x_deps))
+    print(CC+'y depends on: @O {} @D '.format(y_deps))
+    pre(x_deps=={'noise0', 'noise2'}, 'failed test')
+    pre(y_deps=={'noise1', 'noise2'}, 'failed test')

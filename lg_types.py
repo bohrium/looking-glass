@@ -128,14 +128,14 @@ tGrid  = TS.add_base('grid')
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~  2.1 Named Product Types  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-tCell           = TS.add_product('cell', tInt  , tInt  )
-tDir            = TS.add_product('cell', tInt  , tInt  )
-tBlock          = TS.add_product('cell', tShape, tColor)
-tClrdCell       = TS.add_product('cell', tCell , tColor)
-tNmbrdColor     = TS.add_product('cell', tInt  , tColor)
-tNmbrdBlock     = TS.add_product('cell', tBlock, tInt  )
-tPtdGrid        = TS.add_product('cell', tGrid , tCell )
-tGridPair       = TS.add_product('cell', tGrid , tGrid )
+tCell           = TS.add_product('cell'         , tInt  , tInt  )
+tDir            = TS.add_product('dir'          , tInt  , tInt  )
+tBlock          = TS.add_product('block'        , tShape, tColor)
+tClrdCell       = TS.add_product('clrdcell'     , tCell , tColor)
+tNmbrdColor     = TS.add_product('nmbrdcolor'   , tInt  , tColor)
+tNmbrdBlock     = TS.add_product('nmbrdblock'   , tBlock, tInt  )
+tPtdGrid        = TS.add_product('ptdgrid'      , tGrid , tCell )
+tGridPair       = TS.add_product('gridpair'     , tGrid , tGrid )
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~  2.2 Templates for Fake Polymorphism  ~~~~~~~~~~~~~~~~~~~~~~~~~#

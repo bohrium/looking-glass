@@ -3,12 +3,18 @@
     create: 2019-02-26
     descrp: Organize dsl primitives' implementations. 
     to use: To import and initialize, type
+
                 from resources import PrimitivesWrapper
                 P = PrimitivesWrapper()
-            Then the dictionary of implementations-and-types-by-name is:
+
+            Then the dictionary of (implementations-and-types)-by-name is:
+
                 P.primitives 
+
             For example, running this file with
+
                 python resources.py
+
             will print the dictionary item by item.
 '''
 
