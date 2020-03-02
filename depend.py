@@ -1,5 +1,5 @@
 ''' author: samtenka
-    change: 2020-02-29
+    change: 2020-03-01
     create: 2019-02-28
     descrp: Bound potential dependencies of output on specified noise leaves in
             a given program tree.  We use abstract interpretation, thus
@@ -45,6 +45,7 @@ import sys
 import types
 
 from utils import CC, pre       # ansi
+from parse import str_from_tree_flat 
 
 #=============================================================================#
 #=====  0. TYPE OF DEPENDENCY VALUES  ========================================#
@@ -220,7 +221,7 @@ class DepValue:
 
     def __repr__(self):
         if self.kind=='base':
-            return str(sorted(self.members))
+            return str(self.members)
         elif self.kind == 'pair':
             return '({},{})'.format(repr(self.fst), repr(self.snd))
         elif self.kind=='from':
@@ -653,7 +654,7 @@ if __name__=='__main__':
         print(CC+'@R --- TESTING {} ---@D '.format(test_nm))
         for tree, dependency_value in pairs:
             print(CC+'expect deps @O {} @D from tree @P {}@D '.format(
-                dependency_value, tree
+                dependency_value, str_from_tree_flat(tree)
             ))
             predicted = DA.abstract_eval(tree)
             pre(predicted==dependency_value, 'failed test!')
