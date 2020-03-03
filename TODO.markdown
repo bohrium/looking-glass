@@ -42,6 +42,12 @@ INJECTIVITY ANALYSIS
      >< labeling of noise
  >< finally, implement injectivity analysis 
 
+UNDERSTAND AND FILTER OUT BORING TASKS
+ [] why so many blanks?  shouldn't it learn to paint?
+ [] inspect samples from 50 generated tasks 
+ >< filter naively for blank, constant, and identity 
+ [] train grammar weights on interestingness heuristic (REINFORCE)? 
+ [] use notion of closeness to outputx, to output y as condition in generation?
 
 FUNCTIONALIZE 10 EASY TASKS 
  >< regard top levels in terms of pair<grid,grid> outer return type
@@ -56,35 +62,34 @@ FUNCTIONALIZE 10 EASY TASKS
      >< 0
      >< 1
      >< 2
-     [] 3
-     [] 4
+     >< 3
+     >< 4
      [] 5
      [] 6
      [] 7
      [] 8
      [] 9
 
-use l1 regularized logistic regression to train on sample trees
- [] implement probabilistic model and logistic regression 
- [] sensitize to further conditions? 
-     [] condition bigram generation on index of argument in arglist? 
-     [] condition on order in resources?
-     [] condition on depth?
-
-
-make sure programs are evaluatable
- >< parse programs into runnable lambdas (in parse.py)
- >< populate resources.py to provide implementations used by
-        interpret_script.py
-     [] clarify interface with shape.py, grid.py, etc
-
-sample and run programs!
- [] send to cathy
- [] send to arc email list
-
-obtain further trees while introducing new primitives
+OBTAIN FURTHER TREES WHILE INTRODUCING NEW PRIMITIVES
  [] functionalize 10 easy tasks each in a new way, e.g. rotations
  [] compress code based on 20 solutions to 10 easy tasks
  [] functionalize 10 medium tasks
+
+USE L1 REGULARIZED LOGISTIC REGRESSION TO TRAIN ON SAMPLE TREES
+ >< implement probabilistic model and logistic regression 
+ >< sensitize to further conditions? 
+     >< condition bigram generation on index of argument in arglist? 
+     >< condition on order in resources?
+     >< condition on depth?
+
+MAKE SURE PROGRAMS ARE EVALUATABLE
+ >< parse programs into runnable lambdas (in parse.py)
+ >< populate resources.py to provide implementations used by
+        interpret_script.py
+ [] clarify interface with shape.py, grid.py, etc
+
+SAMPLE AND RUN PROGRAMS!
+ [] send to cathy
+ [] send to arc email list
 
 

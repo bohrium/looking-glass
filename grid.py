@@ -24,6 +24,14 @@ class Grid:
         self.H = H 
         self.W = W
 
+    def __eq__(self, rhs):
+        if self.H != rhs.H or self.W != rhs.W: return False
+        for h in range(self.H):
+            for w in range(self.W):
+                if self.colors[h,w] != rhs.colors[h,w]:
+                    return False
+        return True
+
     def center(self):
         return (self.H//2, self.W//2)
     def get_border_cell(self, cell, offset):
