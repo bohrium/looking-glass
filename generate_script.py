@@ -32,7 +32,7 @@ from inject import InjectivityAnalyzer
 #=============================================================================#
 
 class GrammarSampler:
-    def __init__(self, verbose=False, depth_bound=10):
+    def __init__(self, verbose=False, depth_bound=20):
         self.primitives = PrimitivesWrapper().primitives
         self.verbose = verbose
         self.timeout_prob = 1e-3
@@ -42,9 +42,17 @@ class GrammarSampler:
 
         self.weights = WeightLearner()
 
-    def learn_from(self, tree):
-        self.weights.observe_tree(tree)
+    def learn_from(self, trees):
+        for t in trees:
+            self.weights.observe_tree(t)
         self.weights.compute_weights()
+        print(self.weights.types.as_dict())
+        was = sorted([
+            (self.weights.w_unigram[i], a) 
+            for a,i in self.weights.actions.as_dict().items()
+        ])
+        for w,a in was:
+            print('{} {:.2f}'.format(a, w))
 
     def reset_varcount(self):
         self.var_count = 0
@@ -55,7 +63,15 @@ class GrammarSampler:
 
     Match = namedtuple('Match', ['token', 'name', 'hypoths']) 
 
-    def construct(self, goal, imprimitives={}, parent_token='root', depth_remaining=None):
+    def construct(
+        self,
+        goal,
+        parent='root',
+        grandp='root',
+        imprimitives={},
+        lastres=None,
+        depth=0,
+    ):
         '''
             self.primitives should be a dictionary of types by name
             imprimitives    should be a dictionary of types by name
@@ -64,9 +80,7 @@ class GrammarSampler:
             pre(False, 'timeout')
         if self.verbose:
             print(CC+'current goal: @P {} @D '.format(str(goal)))
-        if depth_remaining is None:
-            depth_remaining = self.depth_bound
-        pre(depth_remaining, 'depth reached')
+        pre(depth < self.depth_bound, 'depth reached')
     
         matches = [
             GrammarSampler.Match(nm, nm, hypoths)
@@ -85,14 +99,20 @@ class GrammarSampler:
                 GrammarSampler.Match('root', None, [])
             )
 
-        predictions = self.weights.predict(parent_token, imprimitives.values())
+        logits_by_name = self.weights.predict_logits(
+            parent          =   parent                      ,
+            grandp          =   grandp                      ,
+            vailresources   =   set(imprimitives.values())  ,
+            lastres         =   lastres                     ,
+            depth           =   depth                       ,
+        )
         probs = np.array([
-            predictions[m.token]
-            if m.token in predictions else 0.0
+            np.exp(logits_by_name[m.token])
+            if m.token in logits_by_name else 0.0
             for m in matches
         ])
         probs = probs/np.sum(probs)
-        match = matches[np.random.choice(range(len(matches)), p=probs)]
+        match = matches[np.random.choice(len(matches), p=probs)]
 
         if match.token == 'root':
             if self.verbose:
@@ -101,7 +121,14 @@ class GrammarSampler:
             var_nm = self.get_fresh()
             resources = {k:v for k,v in imprimitives.items()}
             resources[var_nm] = goal.arg
-            body = self.construct(goal.out, resources, 'root', depth_remaining-1)
+            body = self.construct(
+                goal            =   goal.out    ,
+                parent          =   'root'      ,
+                grandp          =   parent      ,
+                imprimitives    =   resources   ,
+                lastres         =   goal.arg    ,
+                depth           =   depth+1     ,
+            )
             return (
                 '(\\{}:{} -> \n{})'.format(var_nm, str(goal.arg), body)
             )
@@ -110,8 +137,15 @@ class GrammarSampler:
                 print(CC+'matched @P {}@D with @P {}@D '.format(goal, match.name))
 
             hypotheses = [
-                self.construct(h, imprimitives, match.token, depth_remaining-1)
-                for h in match.hypoths
+                self.construct(
+                    goal            =   h               ,
+                    parent          =   (match.token, i),
+                    grandp          =   parent          ,
+                    imprimitives    =   imprimitives    ,
+                    lastres         =   lastres         ,
+                    depth           =   depth+1         ,
+                )
+                for i, h in enumerate(match.hypoths)
             ]
     
             return (
@@ -125,12 +159,12 @@ class GrammarSampler:
         if not self.verbose: it = tqdm.tqdm(it)
         for _ in it:
             try:
-              code = self.construct(goal)
-              pre(code is not None, '')
-              return code
-            except:
-                self.reset_varcount()
-                continue
+                code = self.construct(goal)
+                if code is not None:
+                    return code
+            except AssertionError:
+                pass
+            self.reset_varcount()
 
 if __name__=='__main__':
     print(CC+'@P learning from examples...@D ')
@@ -140,14 +174,15 @@ if __name__=='__main__':
         'manual.003.arcdsl',
         'manual.006.arcdsl',
     ]
+    trees = []
     for file_nm in CODE_FILE_NMS:
         with open(file_nm) as f:
-            code = f.read()
-        GS.learn_from(Parser(code).get_tree())
+            trees.append(Parser(f.read()).get_tree())
+    GS.learn_from(trees)
 
     C = InjectivityAnalyzer(verbose=False)
     print(CC+'@P sampling new program...@D ')
-    while True:
+    for _ in range(50):
         try:
             code = GS.tenacious_construct(tGridPair) 
             P = Parser(code)
@@ -158,7 +193,7 @@ if __name__=='__main__':
                     continue
             except:
                 print(CC+'problem with... \n@P {} @D '.format(str_from_tree(t)))
-                assert False
+            assert False
 
             break
         except TypeError:

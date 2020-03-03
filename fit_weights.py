@@ -65,6 +65,7 @@ class WeightLearner:
         self.parents = Index()
         self.types   = Index({None})
 
+    # TODO: update nomenclature in this method
     def observe_datapoint(
         self, atom, parent, grandparent, resources, lastres, depth
     ):
@@ -83,7 +84,7 @@ class WeightLearner:
         ))
 
     def observe_tree(
-        self, tree, parent=('root', 0), grandparent=('root', 0),
+        self, tree, parent='root', grandparent='root',
         resources={}, lastres=None, depth=0
     ): 
         if type(tree) == list:
@@ -116,7 +117,7 @@ class WeightLearner:
                 new_resources[var_nm] = var_type
                 self.observe_tree(
                     tree            =   body            ,
-                    parent          =   ('root', 0)     ,
+                    parent          =   'root'          ,
                     grandparent     =   parent          ,
                     resources       =   new_resources   ,
                     lastres         =   var_type        ,
@@ -151,6 +152,22 @@ class WeightLearner:
         self.w_depth     = np.full(          out_dim,  0.0)
 
     def predict_logits(
+        self, parent, grandp, vailresources, lastres, depth
+    ):
+        parent_idx = self.parents.idx(parent) 
+        grandp_idx = self.parents.idx(grandp) 
+        vailres_indices = [self.types.idx(res) for res in vailresources]
+        lastres_idx = self.types.idx(lastres)
+
+        as_array = self.predict_logits_by_indices(
+            parent_idx, grandp_idx, vailres_indices, lastres_idx, depth
+        )
+        return {
+            a : as_array[i]
+            for a, i in self.actions.as_dict().items()
+        }
+
+    def predict_logits_by_indices(
         self, parent_idx, grandp_idx, vailres_indices, lastres_idx, depth
     ):
         logits = (
@@ -159,7 +176,7 @@ class WeightLearner:
             +    self.w_grandp [grandp_idx]
             +sum(self.w_vailres[        idx] for idx in vailres_indices)
             +    self.w_lastres[lastres_idx]
-            +    self.w_depth * depth
+        #    +    self.w_depth * depth
         )
         clipped = np.maximum(logits - np.amax(logits), -10.0)
         return clipped 
@@ -170,7 +187,7 @@ class WeightLearner:
         parent_idx, grandp_idx, vailres_indices, lastres_idx, depth,
         learning_rate, regularizer=0.1
     ):
-        unnormalized_probs = np.exp(self.predict_logits(
+        unnormalized_probs = np.exp(self.predict_logits_by_indices(
             parent_idx, grandp_idx, vailres_indices, lastres_idx, depth
         ))
         diffs = unnormalized_probs / np.sum(unnormalized_probs)
@@ -184,11 +201,11 @@ class WeightLearner:
         for idx in vailres_indices:
             self.w_vailres[idx]     -= learning_rate * (diffs         + regularizer * np.sign(self.w_vailres[idx]))
         self.w_lastres[lastres_idx] -= learning_rate * (diffs         + regularizer * np.sign(self.w_lastres[lastres_idx]))
-        self.w_depth                -= learning_rate * (diffs * depth                                      )
+        #self.w_depth                -= learning_rate * (diffs * depth                                      )
 
         return loss
 
-    def compute_weights(self, schedule=[(100,1.0),(100,0.1),(100,0.01),]):
+    def compute_weights(self, schedule=[(100,0.2),(40,0.05),]):
         '''
             Fit a model
                 P(atom | parent,resources) ~
@@ -201,6 +218,7 @@ class WeightLearner:
 
         total_T = 0
         for T, eta in schedule:
+            sum_loss = 0.0 
             for _ in range(T):
                 for action, parent, grandp, vailresources, lastres, depth in self.train_set: 
                     action_idx = self.actions.idx(action) 
@@ -210,14 +228,14 @@ class WeightLearner:
                     vailres_indices = [self.types.idx(res) for res in vailresources]
                     lastres_idx = self.types.idx(lastres)
 
-                    loss = self.grad_update(
+                    sum_loss += self.grad_update(
                         action_idx,
                         parent_idx, grandp_idx, vailres_indices, lastres_idx, depth,
                         learning_rate = eta
                     )
             total_T += T
-            print(CC + 'perplexity @R {:.2f} @D after @G {} @D updates'.format(
-                np.exp(loss), total_T
+            print(CC + 'perplexity @R {:.2f} @D after @G {} @D epochs'.format(
+                np.exp(sum_loss/(T*len(self.train_set))), total_T
             ))
 
 if __name__=='__main__':
