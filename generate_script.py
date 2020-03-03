@@ -155,11 +155,38 @@ class GrammarSampler:
             )
 
     def tenacious_construct(self, goal):
+        primitives = PrimitivesWrapper().primitives
         it = range(self.nb_tries) 
         if not self.verbose: it = tqdm.tqdm(it)
         for _ in it:
             try:
                 code = self.construct(goal)
+                P = Parser(code)
+                t = P.get_tree()
+                if not C.is_interesting(t):
+                    print(CC+'@R uninteresting! @D ')
+                    assert False
+                for _ in range(100):
+                    try:
+                        x,y = evaluate_tree(t, primitives)
+                        x_,y_ = evaluate_tree(t, primitives)
+                        if set(e for r in y.colors for e in r)=={'K'}:
+                            print(CC+'@R all blank! @D ')
+                            assert False
+                        if y and y_: 
+                            print(CC+'@R constant! @D ')
+                            assert False
+                        if x==y and x_==y_: 
+                            print(CC+'@R identity! @D ')
+                            assert False
+                        break
+
+                    except InternalError:
+                        continue
+                else:
+                    print(CC+'@R unrunnable! @D ')
+                    assert False
+
                 if code is not None:
                     return code
             except AssertionError:
@@ -190,13 +217,6 @@ if __name__=='__main__':
             code = GS.tenacious_construct(tGridPair) 
             P = Parser(code)
             t = P.get_tree()
-            try:
-                if not C.is_interesting(t):
-                    print(CC+'@R uninteresting! @D ')
-                    continue
-            except:
-                print(CC+'problem with... \n@P {} @D '.format(str_from_tree(t)))
-                assert False
             break
         except TypeError:
             continue
