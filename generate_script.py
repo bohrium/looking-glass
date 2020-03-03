@@ -46,13 +46,13 @@ class GrammarSampler:
         for t in trees:
             self.weights.observe_tree(t)
         self.weights.compute_weights()
-        print(self.weights.types.as_dict())
-        was = sorted([
-            (self.weights.w_unigram[i], a) 
-            for a,i in self.weights.actions.as_dict().items()
-        ])
-        for w,a in was:
-            print('{} {:.2f}'.format(a, w))
+        #print(self.weights.types.as_dict())
+        #was = sorted([
+        #    (self.weights.w_unigram[i], a) 
+        #    for a,i in self.weights.actions.as_dict().items()
+        #])
+        #for w,a in was:
+        #    print('{} {:.2f}'.format(a, w))
 
     def reset_varcount(self):
         self.var_count = 0
@@ -171,8 +171,9 @@ if __name__=='__main__':
     GS = GrammarSampler(verbose=False)
 
     CODE_FILE_NMS = [
-        'manual.003.arcdsl',
+        #'manual.003.arcdsl',
         'manual.006.arcdsl',
+        'manual.007.arcdsl',
     ]
     trees = []
     for file_nm in CODE_FILE_NMS:
@@ -193,8 +194,7 @@ if __name__=='__main__':
                     continue
             except:
                 print(CC+'problem with... \n@P {} @D '.format(str_from_tree(t)))
-            assert False
-
+                assert False
             break
         except TypeError:
             continue

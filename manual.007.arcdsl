@@ -8,11 +8,11 @@ split<grid><gridpair>
     (
         split<ptdgrid><grid>
         (reserve_shape noise blank shape_small (center shape_small))
-        \ptdgridd:ptdgrid -> (
+        \pg:ptdgrid -> (
             paint_sprite
-            (fst<ptdgrid> ptdgridd)
+            (fst<ptdgrid> pg)
             (monochrome shape_small red)
-            (snd<ptdgrid> ptdgridd)
+            (snd<ptdgrid> pg)
             (center shape_small)
         )
     )

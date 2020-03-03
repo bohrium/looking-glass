@@ -422,13 +422,13 @@ routines = [
     sample_003_functional,
     sample_006_functional,
     sample_007_functional,
-    #sample_008,
-    #sample_016,
-    #sample_022,
-    #sample_023,
-    #sample_032,
-    #sample_034,
-    #sample_037,
+    sample_008,
+    sample_016,
+    sample_022,
+    sample_023,
+    sample_032,
+    sample_034,
+    sample_037,
 ]
 
 if __name__=='__main__':

@@ -9,13 +9,16 @@ from utils import InternalError                         # maybe
 from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
 
-from parse import Parser
+from parse import Parser, str_from_tree
 from fit_weights import WeightLearner
 from resources import PrimitivesWrapper
 from vis import str_from_grids, render_color
 
 
+where = ''
 def evaluate_tree(tree, resources):
+    global where 
+    where = tree
     if type(tree)==type(''):
         rtrn = resources[tree][0] # get implementation instead of type
         if type(rtrn)==type('') and (rtrn in resources):
@@ -40,9 +43,10 @@ def evaluate_tree(tree, resources):
         return partial
 
 if __name__=='__main__':
-    CODE_FILE_NM = 'manual.003.arcdsl'
-    CODE_FILE_NM = 'manual.006.arcdsl'
-    CODE_FILE_NM = 'manual.007.arcdsl'
+    #CODE_FILE_NM = 'manual.003.arcdsl'
+    #CODE_FILE_NM = 'manual.006.arcdsl'
+    #CODE_FILE_NM = 'manual.007.arcdsl'
+    CODE_FILE_NM = 'manual.008.arcdsl'
     with open(CODE_FILE_NM) as f:
         code = f.read()
     print(CC+'parsing @P {}@D ...'.format(CODE_FILE_NM))
@@ -58,4 +62,7 @@ if __name__=='__main__':
            break
        except InternalError:
            continue
+       #except:
+       #    print(str_from_tree(where))
+       #    assert False
 

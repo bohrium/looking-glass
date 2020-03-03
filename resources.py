@@ -31,9 +31,9 @@ from block import GENERIC_COLORS, Block, block_equals
 from grid import Grid
 
 from lg_types import tInt, tCell, tColor, tShape, tBlock, tGrid, tDir, tNoise
-from lg_types import tNmbrdBlock, tClrdCell, tPtdGrid, tGridPair, tNmbrdColor
-
+from lg_types import tNmbrdBlock, tClrdCell, tPtdGrid, tGridPair, tNmbrdColor, tNmbrdGrid
 from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
+from lg_types import TS
 
 import functools
 
@@ -90,13 +90,18 @@ class PrimitivesWrapper:
         '''
         self.primitives = {}
         common_types = {
-            tInt, tCell, tColor, tShape, tGrid,
+            tInt, tCell, tColor, tShape, tGrid, tBlock,
+            tNmbrdGrid, tNmbrdGrid.s(),
             tPtdGrid, tGridPair, tNmbrdColor, tNmbrdColor.s()
         } 
         for goal in common_types:
+            self.__make_nil__(elt=goal)
+            self.__make_add__(elt=goal)
+            self.__make_len__(elt=goal)
+
+            self.__make_argmax__(elt=goal)
             self.__make_repeat__(goal=goal)
             self.__make_uniq__(target=goal)
-            self.__make_len__(target=goal)
             self.__make_cond__(goal=goal)
             self.__make_eq__(source=goal)
             for t in common_types:
@@ -104,17 +109,7 @@ class PrimitivesWrapper:
                 self.__make_fold__(contained=t, goal=goal)
                 self.__make_map__(source=t, target=goal)
 
-        type_decompositions = {
-            tCell:(tInt, tInt),
-            tDir:(tInt, tInt),
-            tNmbrdColor:(tInt, tColor),
-            tClrdCell:(tCell, tColor),
-            tPtdGrid:(tGrid, tCell),
-            tGridPair:(tGrid, tGrid),
-            tBlock:(tShape, tColor),
-            tNmbrdBlock:(tBlock, tInt),
-        }
-        for prod, (fst, snd) in type_decompositions.items():
+        for prod, (fst, snd) in TS.product_decompositions.items():
             self.__make_pair__(prod=prod, fst=fst, snd=snd)
             self.__make_fst__(prod=prod, fst=fst, snd=snd)
             self.__make_snd__(prod=prod, fst=fst, snd=snd)
@@ -167,7 +162,25 @@ class PrimitivesWrapper:
         impl = lambda xy: xy[1]
         self.primitives[name] = (impl, lg_type)
 
-    #-----------------  1.0.2 iteration  -------------------------------------#
+    #-----------------  1.0.2 multiset types  --------------------------------#
+
+    def __make_nil__(self, elt):
+        name = 'nil<{}>'.format(elt) 
+        lg_type = elt.s()
+        impl = ()
+        self.primitives[name] = (impl, lg_type)
+    def __make_add__(self, elt):
+        name = 'add<{}>'.format(elt) 
+        lg_type = elt.s().frm(elt).frm(elt.s())
+        impl = lambda tail: lambda head: (head,)+tail
+        self.primitives[name] = (impl, lg_type)
+    def __make_len__(self, elt):
+        name = 'len<{}>'.format(elt) 
+        lg_type = tInt.frm(elt.s())
+        impl = lambda l: len(l)
+        self.primitives[name] = (impl, lg_type)
+
+    #-----------------  1.0.3 iteration  -------------------------------------#
 
     def __make_repeat__(self, goal):
         name = 'repeat<{}>'.format(goal) 
@@ -178,7 +191,7 @@ class PrimitivesWrapper:
         )
         self.primitives[name] = (impl, lg_type)
     def __make_fold__(self, contained, goal):
-        name = 'fold<{}><{}>'.format(contained,goal) 
+        name = 'fold<{}><{}>'.format(contained, goal) 
         lg_type = goal.frm(goal.frm(goal).frm(contained)).frm(goal).frm(contained.s())
         impl = (
             lambda cs: lambda i: lambda f:
@@ -195,13 +208,20 @@ class PrimitivesWrapper:
         lg_type = target.s().frm(target.s())
         impl = lambda ss: list(set(collection))
         self.primitives[name] = (impl, lg_type)
-    def __make_len__(self, target):
-        name = 'len<{}>'.format(target)
-        lg_type = tInt.frm(target.s())
-        impl = lambda ss: len(ss)
+    def __make_argmax__(self, elt):
+        name = 'argmax<{}>'.format(elt)
+        lg_type = elt.s().frm(tInt.frm(elt)).frm(elt.s())
+        def impl(elts):
+            def impl_inner(score):
+                m = max(map(score, elts))
+                f = [e for e in elts if score(e)==m]
+                internal_assert(len(f)==1, 'argmax not defined!')
+                return f[0]
+            return impl_inner
         self.primitives[name] = (impl, lg_type)
 
-    #-----------------  1.0.3 logic  -----------------------------------------#
+
+    #-----------------  1.0.4 logic  -----------------------------------------#
 
     def __make_cond__(self, goal):
         name = 'cond<{}>'.format(goal)
