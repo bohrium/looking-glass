@@ -21,7 +21,7 @@
 import inspect
 import numpy as np
 
-from utils import ARC_path, InternalError
+from utils import ARC_path, InternalError, internal_assert
 from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
 from utils import reseed, bernoulli, geometric, uniform # math
@@ -236,21 +236,46 @@ class PrimitivesWrapper:
 
     @sm(tNoise)
     def noise(): return None
+
     @sm(tInt.frm(tNoise))
     def coin(tNoise): return bernoulli(0.5)
     @sm(tInt.frm(tNoise))
     def afew(noise): return  2+geometric(0.25)
     @sm(tInt.frm(tNoise))
     def many(noise): return 10+geometric(2.50)
+    @sm(tInt)
+    def one(): return 1
+    @sm(tInt)
+    def two(): return 2
+    @sm(tInt)
+    def three(): return 3
+    @sm(tInt)
+    def four(): return 4
+
     @sm(tColor.frm(tNoise))
     def rainbow(noise): return uniform(GENERIC_COLORS)
     @sm(tColor)
     def gray(): return 'A'
+    @sm(tColor)
+    def red(): return 'R'
+    @sm(tColor)
+    def cyan(): return 'C'
+    @sm(tColor)
+    def blue(): return 'B'
+ 
     @sm(tGrid.frm(tInt).frm(tInt))
     def new_grid(h, w): return Grid(h,w)
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-    #~~~~~~~~~~ 1.2 Explicit Shapes and Sprites  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+    #~~~~~~~~~~ 1.2 Shapes and Sprites  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+    @sm(tShape.frm(tInt).frm(tNoise))
+    def gen_shape(noise, side):
+        internal_assert(1<=side<=6, 'requested shape sidelength illegal')
+        SG = ShapeGen()
+        SG.set_side(side)
+        shape = SG.search(crop=True) 
+        return shape 
 
     @sm(tShape)
     def small_square(): return PrimitivesWrapper.make_square(3) 

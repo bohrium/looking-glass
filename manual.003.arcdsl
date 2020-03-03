@@ -2,8 +2,8 @@
 split<int><gridpair> (many noise) \side:int -> (
 split<int><gridpair> (afew noise) \nb_objs:int -> (
 split<grid><gridpair> (new_grid side side) \blank:grid -> (
-split<color><gridpair> (rainbow noise) \color_a:grid -> (
-split<color><gridpair> (rainbow noise) \color_b:grid -> (
+split<color><gridpair> (rainbow noise) \color_a:color -> (
+split<color><gridpair> (rainbow noise) \color_b:color -> (
 repeat<gridpair> nb_objs (pair<gridpair> blank blank) \xy:gridpair -> (
     split<ptdgrid><gridpair> (
     reserve_shape noise (snd<gridpair> xy) large_square (center large_square)

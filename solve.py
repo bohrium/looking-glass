@@ -30,15 +30,19 @@ def evaluate_tree(tree, resources):
             )
     else:
         caller, args = tree[0], tree[1:]
+        #print(caller)
         partial = evaluate_tree(caller, resources)
         for arg in args:
-            partial = partial(evaluate_tree(arg, resources))
+            aa = evaluate_tree(arg, resources)
+            #print(repr(arg), repr(aa))
+            #input()
+            partial = partial(aa)
         return partial
 
 if __name__=='__main__':
     CODE_FILE_NM = 'manual.003.arcdsl'
-    CODE_FILE_NM = 'hello.arcdsl'
     CODE_FILE_NM = 'manual.006.arcdsl'
+    CODE_FILE_NM = 'manual.007.arcdsl'
     with open(CODE_FILE_NM) as f:
         code = f.read()
     print(CC+'parsing @P {}@D ...'.format(CODE_FILE_NM))
@@ -54,12 +58,4 @@ if __name__=='__main__':
            break
        except InternalError:
            continue
-
-    #WL = WeightLearner()
-    #WL.observe_tree(t)
-    #WL.compute_weights()
-    #predictions = WL.predict('root', set([]))
-    #for k,v in sorted(predictions.items(), reverse=True, key=lambda xy: xy[1]):
-    #    print(CC+'@R {} @G {}'.format(k,v))
-
 
