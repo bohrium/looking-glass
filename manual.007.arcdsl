@@ -20,7 +20,8 @@ split<grid><gridpair>
         split<grid><gridpair>
         (
             repeat<grid> nb_big_objs reddened \z:grid -> (
-                split<ptdgrid><grid> (reserve_shape noise z shape_big (center shape_big))
+                split<ptdgrid><grid>
+                (reserve_shape noise z shape_big (center shape_big))
                 \ptdgrid:ptdgrid -> (
                     paint_sprite
                     (fst<ptdgrid> ptdgrid)

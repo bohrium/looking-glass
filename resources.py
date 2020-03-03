@@ -265,7 +265,7 @@ class PrimitivesWrapper:
     @sm(tInt.frm(tNoise))
     def svrl(noise): return  1+bernoulli(0.8)+bernoulli(0.8)+geometric(0.5)
     @sm(tInt.frm(tNoise))
-    def many(noise): return 10+geometric(2.50)
+    def many(noise): return 8+geometric(2.0)
     @sm(tInt)
     def one(): return 1
     @sm(tInt)
@@ -276,7 +276,19 @@ class PrimitivesWrapper:
     def four(): return 4
 
     @sm(tDir)
+    def east(): return ( 0,  1)
+    @sm(tDir)
+    def northeast(): return (-1,  1)
+    @sm(tDir)
+    def north(): return (-1,  0)
+    @sm(tDir)
     def northwest(): return (-1, -1)
+    @sm(tDir)
+    def west(): return ( 0, -1)
+    @sm(tDir)
+    def southwest(): return ( 1, -1)
+    @sm(tDir)
+    def south(): return ( 1,  0)
     @sm(tDir)
     def southeast(): return ( 1,  1)
 
@@ -386,6 +398,12 @@ class PrimitivesWrapper:
             [1 if el!='K' else 0 for el in row]
             for row in grid.colors
         ])
+
+    @sm(tCell.frm(tGrid).frm(tNoise))
+    def sample_cell(noise, grid):
+        internal_assert(grid.H*grid.W != 0, 'cannot sample cell from vacuous grid')
+        return (uniform(grid.H), uniform(grid.W)) 
+
 
     @sm(tPtdGrid.frm(tCell).frm(tShape).frm(tGrid).frm(tNoise))
     def reserve_shape(noise, grid, shape, cell_in_shape):

@@ -1,0 +1,20 @@
+(
+split<int><gridpair> (many noise) \height:int -> (
+split<int><gridpair> (many noise) \width:int -> (
+split<grid><gridpair> (new_grid height width) \blank:grid -> (
+split<grid><gridpair> (new_grid one two) \domino:grid -> (
+split<grid><gridpair> (fill domino gray (corner domino west)) \slab:grid -> (
+repeat<gridpair> (svrl noise) (pair<gridpair> blank blank) \gp:gridpair -> (
+    split<color><gridpair> (rainbow noise) \c:color -> (
+    split<cell><gridpair> (sample_cell noise blank) \start:cell -> (
+    split<grid><gridpair> (paint_cell slab (corner slab west) c) \tile:grid -> (
+    pair<gridpair>
+        (paint_cell (fst<gridpair> gp) start c)
+        (fst<ptdgrid>(
+        repeat<ptdgrid> width (pair<ptdgrid> (snd<gridpair> gp) start) \pg:ptdgrid -> (
+            pair<ptdgrid>
+            (paint_sprite (fst<ptdgrid> pg) tile (snd<ptdgrid> pg) (corner tile west))
+            (displace (displace (snd<ptdgrid> pg) east) east)
+        )))
+)))
+)))))))

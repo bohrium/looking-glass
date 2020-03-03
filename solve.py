@@ -48,6 +48,7 @@ if __name__=='__main__':
     #CODE_FILE_NM = 'manual.007.arcdsl'
     #CODE_FILE_NM = 'manual.008.arcdsl'
     CODE_FILE_NM = 'manual.016.arcdsl'
+    CODE_FILE_NM = 'manual.022.arcdsl'
     with open(CODE_FILE_NM) as f:
         code = f.read()
     print(CC+'parsing @P {}@D ...'.format(CODE_FILE_NM))

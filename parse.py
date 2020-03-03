@@ -79,15 +79,20 @@ class Parser:
         self.string = string
         self.i=0
 
-    def get_tree(self):
-        self.skip_space()
-        tree = self.get_term()
-        pre(self.at_end(),
-            'parsing failure near: ...@G {}@R {}...'.format(
+    def parse_assert(self, cond, message):
+        pre(cond,
+            'parse fail: @O {} @D near: ...@G {}@R {}...'.format(
+                message,
                 self.string[:self.i][-50:],
                 self.string[self.i:][:50]
             )
         )
+
+
+    def get_tree(self):
+        self.skip_space()
+        tree = self.get_term()
+        self.parse_assert(self.at_end(), 'program has extra characters')
         return tree
 
     def at_end(self):
@@ -102,7 +107,9 @@ class Parser:
     def match(self, s):
         ''' matches then skips space'''
         prefix = self.string[self.i:][:len(s)]
-        pre(prefix==s, 'expected `{}` but saw `{}`'.format(s, prefix))
+        self.parse_assert(prefix==s,
+            'expected `{}` but saw `{}`'.format(s, prefix)
+        )
         self.i+=len(s)
         self.skip_space()
 
@@ -140,7 +147,11 @@ class Parser:
             nm = self.get_identifier()
             t = TS.base_types_by_nm[nm]
         else:
-            pre(False, 'unknown symbol when parsing type!')
+            self.parse_assert(False,
+                'type contains foreign symbol `{}`'.format(
+                    self.peek()
+                )
+            )
         return t
 
     def get_term(self): 
@@ -163,7 +174,11 @@ class Parser:
         elif self.peek() in Parser.ALPHA:
             tree = self.get_identifier(parameterized=True)
         else:
-            pre(False, 'unknown character `{}`'.format(self.peek()))
+            self.parse_assert(False,
+                'term contains foreign symbol `{}`'.format(
+                    self.peek()
+                )
+            )
         return tree
 
 if __name__=='__main__':
