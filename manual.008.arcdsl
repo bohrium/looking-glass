@@ -1,6 +1,6 @@
 (
 split<int><gridpair> (many noise) \side:int -> (
-split<int><gridpair> (afew noise) \nb_shapes:int -> (
+split<int><gridpair> (svrl noise) \nb_shapes:int -> (
 split<{nmbrdgrid}><gridpair> (
     repeat<{nmbrdgrid}> nb_shapes nil<nmbrdgrid> \ngs:{nmbrdgrid} -> (
         add<nmbrdgrid> ngs (

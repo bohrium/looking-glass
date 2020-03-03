@@ -1,5 +1,5 @@
 (
-split<int><gridpair> (afew noise) \side:int -> (
+split<int><gridpair> (svrl noise) \side:int -> (
 split<grid><gridpair> (new_grid side side) \blank:grid -> (
 fold<int><gridpair> (rows blank) (pair<gridpair> blank blank)
     \row:int -> \xy:gridpair -> ( 

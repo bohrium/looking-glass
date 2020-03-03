@@ -85,10 +85,13 @@ class LGType:
         '''
         if self.kind=='base': return [([self], [])]
         if self.kind=='from':
-            return [([self], [])] + [
-                (conseqs, hypoths + [self.arg])
-                for conseqs, hypoths in self.out.conseq_hypoth_pairs()
-            ]
+            return (
+                #[([self], [])] + 
+                [
+                    (conseqs, hypoths + [self.arg])
+                    for conseqs, hypoths in self.out.conseq_hypoth_pairs()
+                ]
+            )
         if self.kind=='mset': return [([self], [])]
 
 #=============================================================================#

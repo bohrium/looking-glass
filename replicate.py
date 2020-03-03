@@ -419,11 +419,11 @@ def tenacious_gen(f, nb_iters=100):
             continue
 
 routines = [
-    sample_003_functional,
-    sample_006_functional,
-    sample_007_functional,
-    sample_008,
-    sample_016,
+    #sample_003_functional,
+    #sample_006_functional,
+    #sample_007_functional,
+    #sample_008,
+    #sample_016,
     sample_022,
     sample_023,
     sample_032,

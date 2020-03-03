@@ -91,7 +91,7 @@ class PrimitivesWrapper:
         self.primitives = {}
         common_types = {
             tInt, tCell, tColor, tShape, tGrid, tBlock,
-            tNmbrdGrid, tNmbrdGrid.s(),
+            tNmbrdGrid, tNmbrdGrid.s(), tShape.s(),
             tPtdGrid, tGridPair, tNmbrdColor, tNmbrdColor.s()
         } 
         for goal in common_types:
@@ -213,6 +213,7 @@ class PrimitivesWrapper:
         lg_type = elt.s().frm(tInt.frm(elt)).frm(elt.s())
         def impl(elts):
             def impl_inner(score):
+                internal_assert(elts, 'cannot take argmax of empty collection!')
                 m = max(map(score, elts))
                 f = [e for e in elts if score(e)==m]
                 internal_assert(len(f)==1, 'argmax not defined!')
@@ -262,6 +263,8 @@ class PrimitivesWrapper:
     @sm(tInt.frm(tNoise))
     def afew(noise): return  2+geometric(0.25)
     @sm(tInt.frm(tNoise))
+    def svrl(noise): return  1+bernoulli(0.8)+bernoulli(0.8)+geometric(0.5)
+    @sm(tInt.frm(tNoise))
     def many(noise): return 10+geometric(2.50)
     @sm(tInt)
     def one(): return 1
@@ -271,6 +274,12 @@ class PrimitivesWrapper:
     def three(): return 3
     @sm(tInt)
     def four(): return 4
+
+    @sm(tDir)
+    def northwest(): return (-1, -1)
+    @sm(tDir)
+    def southeast(): return ( 1,  1)
+
 
     @sm(tColor.frm(tNoise))
     def rainbow(noise): return uniform(GENERIC_COLORS)
@@ -345,6 +354,21 @@ class PrimitivesWrapper:
     @sm(tInt.s().frm(tGrid))
     def rows(grid): return list(range(grid.H))
 
+    @sm(tCell.s().frm(tDir).frm(tGrid))
+    def corner(grid, direction):
+        h,w = direction
+        h = (
+            0           if h==-1 else 
+            grid.H-1    if h==+1 else 
+            grid.H//2
+        )
+        w = (
+            0           if w==-1 else 
+            grid.W-1    if w==+1 else 
+            grid.W//2
+        )
+        return (h,w)
+
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~~ 1.4 Rendering  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
@@ -384,6 +408,14 @@ class PrimitivesWrapper:
         new_grid = field.copy()
         new_grid.paint_row(row_nb, color)
         return new_grid
+
+    @sm(tGrid.frm(tCell).frm(tColor).frm(tGrid))
+    def fill(field, color, cell):
+        new_grid = field.copy()
+        new_grid.fill(color, cell)
+        return new_grid
+
+
 
     #@sm(tGrid.frm(tCell).frm(tGrid).frm(tGrid).frm(tNoise))
     #def reserve_and_paint_sprite(noise, field, sprite, cell_in_sprite):

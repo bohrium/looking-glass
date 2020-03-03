@@ -35,7 +35,7 @@ class GrammarSampler:
     def __init__(self, verbose=False, depth_bound=20):
         self.primitives = PrimitivesWrapper().primitives
         self.verbose = verbose
-        self.timeout_prob = 1e-3
+        self.timeout_prob = 1e-2
         self.nb_tries = 10**2
         self.depth_bound = depth_bound
         self.var_count = 0
@@ -171,9 +171,11 @@ if __name__=='__main__':
     GS = GrammarSampler(verbose=False)
 
     CODE_FILE_NMS = [
-        #'manual.003.arcdsl',
+        'manual.003.arcdsl',
         'manual.006.arcdsl',
         'manual.007.arcdsl',
+        'manual.008.arcdsl',
+        'manual.016.arcdsl',
     ]
     trees = []
     for file_nm in CODE_FILE_NMS:

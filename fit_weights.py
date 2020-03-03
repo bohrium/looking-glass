@@ -176,7 +176,7 @@ class WeightLearner:
             +    self.w_grandp [grandp_idx]
             +sum(self.w_vailres[        idx] for idx in vailres_indices)
             +    self.w_lastres[lastres_idx]
-        #    +    self.w_depth * depth
+            +    self.w_depth * depth / 10.0
         )
         clipped = np.maximum(logits - np.amax(logits), -10.0)
         return clipped 
@@ -201,11 +201,11 @@ class WeightLearner:
         for idx in vailres_indices:
             self.w_vailres[idx]     -= learning_rate * (diffs         + regularizer * np.sign(self.w_vailres[idx]))
         self.w_lastres[lastres_idx] -= learning_rate * (diffs         + regularizer * np.sign(self.w_lastres[lastres_idx]))
-        #self.w_depth                -= learning_rate * (diffs * depth                                      )
+        self.w_depth                -= learning_rate * (diffs * depth / 10.0                               )
 
         return loss
 
-    def compute_weights(self, schedule=[(100,0.2),(40,0.05),]):
+    def compute_weights(self, schedule=[(100,0.2),(100,0.05),]):
         '''
             Fit a model
                 P(atom | parent,resources) ~
@@ -220,7 +220,9 @@ class WeightLearner:
         for T, eta in schedule:
             sum_loss = 0.0 
             for _ in range(T):
-                for action, parent, grandp, vailresources, lastres, depth in self.train_set: 
+                train = list(self.train_set)
+                np.random.shuffle(train) 
+                for action, parent, grandp, vailresources, lastres, depth in train:
                     action_idx = self.actions.idx(action) 
                     parent_idx = self.parents.idx(parent) 
                     grandp_idx = self.parents.idx(grandp) 

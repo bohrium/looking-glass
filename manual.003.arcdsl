@@ -1,6 +1,6 @@
 (
 split<int><gridpair> (many noise) \side:int -> (
-split<int><gridpair> (afew noise) \nb_objs:int -> (
+split<int><gridpair> (svrl noise) \nb_objs:int -> (
 split<grid><gridpair> (new_grid side side) \blank:grid -> (
 split<color><gridpair> (rainbow noise) \color_a:color -> (
 split<color><gridpair> (rainbow noise) \color_b:color -> (
