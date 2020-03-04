@@ -1,0 +1,31 @@
+(
+split<int><gridpair> (many noise) \height:int -> (
+split<int><gridpair> (many noise) \width:int -> (
+split<grid><gridpair> (new_grid height width) \blank:grid -> (
+split<grid><gridpair> (fill blank brown (corner blank northwest)) \browned:grid -> (
+split<{shape}><gridpair> (
+    repeat<{shape}> (afew noise) nil<shape> \shapes:{shape} -> (
+        add<shape> shapes (gen_shape noise (svrl noise))
+    )
+) \shapes:{shape} -> (
+    assert<gridpair> (
+        less_than zero (len<shape> 
+            (filter<shape> shapes \s:shape -> (len<{cell}> (holes_of s)))
+        )
+    ) ( 
+    fold<shape><gridpair> shapes (pair<gridpair> browned browned) \s:shape -> \gp:gridpair -> (
+        split<ptdgrid><gridpair> (reserve_shape noise (snd<gridpair> gp) s (center s)) \pg:ptdgrid -> (
+        pair<gridpair>
+            (paint_sprite
+                (fst<gridpair> gp)
+                (monochrome s blue)
+                (snd<ptdgrid> pg) (center s) 
+            )
+            (paint_sprite
+                (fst<ptdgrid> pg)
+                (monochrome s (cond<color> (less_than zero (len<{cell}> (holes_of s))) cyan blue))
+                (snd<ptdgrid> pg) (center s) 
+            )
+        ))
+    )
+))))))

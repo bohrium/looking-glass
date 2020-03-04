@@ -35,7 +35,7 @@ class GrammarSampler:
     def __init__(self, verbose=False, depth_bound=20):
         self.primitives = PrimitivesWrapper().primitives
         self.verbose = verbose
-        self.timeout_prob = 1e-2
+        self.timeout_prob = 3e-2
         self.nb_tries = 10**2
         self.depth_bound = depth_bound
         self.var_count = 0
@@ -46,13 +46,6 @@ class GrammarSampler:
         for t in trees:
             self.weights.observe_tree(t)
         self.weights.compute_weights()
-        #print(self.weights.types.as_dict())
-        #was = sorted([
-        #    (self.weights.w_unigram[i], a) 
-        #    for a,i in self.weights.actions.as_dict().items()
-        #])
-        #for w,a in was:
-        #    print('{} {:.2f}'.format(a, w))
 
     def reset_varcount(self):
         self.var_count = 0
@@ -163,9 +156,9 @@ class GrammarSampler:
                 code = self.construct(goal)
                 P = Parser(code)
                 t = P.get_tree()
-                if not C.is_interesting(t):
-                    print(CC+'@R uninteresting! @D ')
-                    assert False
+                #if not C.is_interesting(t):
+                #    print(CC+'@R uninteresting! @D ')
+                #    assert False
                 for _ in range(100):
                     try:
                         x,y = evaluate_tree(t, primitives)
@@ -203,6 +196,7 @@ if __name__=='__main__':
         'manual.007.arcdsl',
         'manual.008.arcdsl',
         'manual.016.arcdsl',
+        'manual.022.arcdsl',
     ]
     trees = []
     for file_nm in CODE_FILE_NMS:

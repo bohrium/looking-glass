@@ -91,7 +91,7 @@ class PrimitivesWrapper:
         self.primitives = {}
         common_types = {
             tInt, tCell, tColor, tShape, tGrid, tBlock,
-            tNmbrdGrid, tNmbrdGrid.s(), tShape.s(),
+            tNmbrdGrid, tNmbrdGrid.s(), tShape.s(), tCell.s(),
             tPtdGrid, tGridPair, tNmbrdColor, tNmbrdColor.s()
         } 
         for goal in common_types:
@@ -99,7 +99,11 @@ class PrimitivesWrapper:
             self.__make_add__(elt=goal)
             self.__make_len__(elt=goal)
 
+            self.__make_assert__(goal=goal)
+
+            self.__make_filter__(elt=goal)
             self.__make_argmax__(elt=goal)
+            self.__make_unwrap_sing__(elt=goal)
             self.__make_repeat__(goal=goal)
             self.__make_uniq__(target=goal)
             self.__make_cond__(goal=goal)
@@ -203,6 +207,13 @@ class PrimitivesWrapper:
         lg_type = target.s().frm(target.frm(source)).frm(source.s())
         impl = lambda ss: lambda f: map(f, ss)
         self.primitives[name] = (impl, lg_type)
+
+    def __make_filter__(self, elt):
+        name = 'filter<{}>'.format(elt)
+        lg_type = elt.s().frm(tInt.frm(elt)).frm(elt.s())
+        impl = lambda ss: lambda p: tuple(s for s in ss if p(s)!=0)
+        self.primitives[name] = (impl, lg_type)
+
     def __make_uniq__(self, target):
         name = 'uniq<{}>'.format(target)
         lg_type = target.s().frm(target.s())
@@ -213,14 +224,29 @@ class PrimitivesWrapper:
         lg_type = elt.s().frm(tInt.frm(elt)).frm(elt.s())
         def impl(elts):
             def impl_inner(score):
-                internal_assert(elts, 'cannot take argmax of empty collection!')
-                m = max(map(score, elts))
-                f = [e for e in elts if score(e)==m]
-                internal_assert(len(f)==1, 'argmax not defined!')
-                return f[0]
+                scored_elts = [(score(e), e) for e in elts] 
+                m = max(se[0] for se in scored_elts)
+                f = tuple(e for s,e in scored_elts if s==m)
+                return f
             return impl_inner
         self.primitives[name] = (impl, lg_type)
+    def __make_unwrap_sing__(self, elt):
+        name = 'unwrap_sing<{}>'.format(elt)
+        lg_type = elt.frm(elt.s())
+        def impl(elts):
+            internal_assert(len(elts)==1, 'can only unwrap singleton')
+            return elts[0]
+        self.primitives[name] = (impl, lg_type)
 
+    def __make_assert__(self, goal):
+        name = 'assert<{}>'.format(goal)
+        lg_type = goal.frm(goal).frm(tInt)
+        def impl(cond):
+            def inner_impl(x):
+                internal_assert(cond, 'assert error')
+                return x
+            return inner_impl
+        self.primitives[name] = (impl, lg_type)
 
     #-----------------  1.0.4 logic  -----------------------------------------#
 
@@ -240,7 +266,7 @@ class PrimitivesWrapper:
     def negate(a): return 1-a
 
     @sm(tInt.frm(tInt).frm(tInt))
-    def less_than(a, b): return 1 if a<b else 0
+    def less_than(a, b): return 1 if (a<b) else 0
 
     @sm(tInt.frm(tInt).frm(tInt))
     def at_most(a, b): return 1 if a<=b else 0
@@ -266,6 +292,8 @@ class PrimitivesWrapper:
     def svrl(noise): return  1+bernoulli(0.8)+bernoulli(0.8)+geometric(0.5)
     @sm(tInt.frm(tNoise))
     def many(noise): return 8+geometric(2.0)
+    @sm(tInt)
+    def zero(): return 0
     @sm(tInt)
     def one(): return 1
     @sm(tInt)
@@ -303,6 +331,8 @@ class PrimitivesWrapper:
     def cyan(): return 'C'
     @sm(tColor)
     def blue(): return 'B'
+    @sm(tColor)
+    def brown(): return 'N'
  
     @sm(tGrid.frm(tInt).frm(tInt))
     def new_grid(h, w): return Grid(h,w)
@@ -361,6 +391,66 @@ class PrimitivesWrapper:
     def displace(cell, offset):
         return tuple(cell[i]+offset[i] for i in range(2))
 
+    @sm(tShape.s().frm(tShape))
+    def holes_of(shape):
+        h, w = shape.shape
+        bordered = np.zeros((h+2,w+2))
+        bordered[1:h+1,1:w+1] = shape
+        offsets = {
+            (dr,dc)
+            for dr in range(-1,2) for dc in range(-1,2)
+            if abs(dr)+abs(dc)==1
+        }
+        points = {
+            (r,c)
+            for r in range(h+2) for c in range(w+2)
+            if bordered[r,c]==0
+        } 
+        unaccounted_for = points
+        parts = []
+        while unaccounted_for:
+            # bfs
+            seen = set([min(unaccounted_for)])
+            frontier = seen # always a subset of seen
+            while frontier:
+                neighbors = set([
+                    (r+dr, c+dc) for (r, c) in frontier for (dr, dc) in offsets
+                ]).intersection(points)
+                frontier = neighbors.difference(seen)
+                seen.update(frontier)
+            if (0,0) not in seen:
+                parts.append(tuple((r-1,c-1) for r,c in seen))
+            unaccounted_for = unaccounted_for.difference(seen)
+        return tuple(parts)
+
+    @sm(tShape.s().frm(tShape))
+    def components_of(shape):
+        offsets = {
+            (dr,dc)
+            for dr in range(-1,2) for dc in range(-1,2)
+            if (dr,dc)!=(0,0)
+        }
+        h, w = shape.shape
+        points = {
+            (r,c)
+            for r in range(h) for c in range(w)
+            if shape[r,c]
+        } 
+        parts = []
+        while points:
+            # bfs
+            seen = set([min(points)])
+            frontier = seen # always a subset of seen
+            while frontier:
+                neighbors = set([
+                    (r+dr, c+dc) for (r, c) in frontier for (dr, dc) in offsets
+                ]).intersection(points)
+                frontier = neighbors.difference(seen)
+                seen.update(frontier)
+            parts.append(seen)
+            points = points.difference(seen)
+        return tuple(parts)
+
     @sm(tInt.s().frm(tGrid))
     def columns(grid): return list(range(grid.W))
     @sm(tInt.s().frm(tGrid))
@@ -417,18 +507,29 @@ class PrimitivesWrapper:
         new_grid.paint_sprite(sprite, cell_in_field, cell_in_sprite)
         return new_grid
     @sm(tGrid.frm(tColor).frm(tCell).frm(tGrid))
-    def paint_cell(field, cell_in_field, color):
+    def paint_cell(field, cell, color):
+        internal_assert(0<=cell[0]<field.H and 0<=cell[1]<field.W,
+            'cell out of bounds!'
+        )
         new_grid = field.copy()
-        new_grid.paint_cell(cell_in_field, color)
+        new_grid.paint_cell(cell, color)
         return new_grid
     @sm(tGrid.frm(tColor).frm(tInt).frm(tGrid))
     def paint_row(field, row_nb, color):
         new_grid = field.copy()
         new_grid.paint_row(row_nb, color)
         return new_grid
+    @sm(tGrid.frm(tColor).frm(tInt).frm(tGrid))
+    def paint_column(field, row_nb, color):
+        new_grid = field.copy()
+        new_grid.paint_column(row_nb, color)
+        return new_grid
 
     @sm(tGrid.frm(tCell).frm(tColor).frm(tGrid))
     def fill(field, color, cell):
+        internal_assert(0<=cell[0]<field.H and 0<=cell[1]<field.W,
+            'cell out of bounds!'
+        )
         new_grid = field.copy()
         new_grid.fill(color, cell)
         return new_grid

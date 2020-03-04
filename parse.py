@@ -48,23 +48,36 @@ def str_from_tree_flat(tree):
         for (nm, t), body in tree.items():
             return '\\{}:{} -> {}'.format(nm, t, str_from_tree_flat(body)) 
 
-def str_from_tree(tree, depth=0, delim='  '):
-    as_flat = '{}{}\n'.format(delim*depth, str_from_tree_flat(tree))
+def str_from_tree(tree, depth=0, delim='   '):
+    tab = depth*delim
+
+    as_flat = '{}{}'.format(tab, str_from_tree_flat(tree))
     if len(as_flat) < 80:
         return as_flat
 
     if type(tree) == str:
-        rtrn = '{}{}\n'.format(delim*depth, tree)
+        return '{}{}'.format(tab, tree)
     elif type(tree) == list:
-        rtrn = '{}(\n'.format(delim*depth)
-        for elt in tree:
-            rtrn += str_from_tree(elt, depth+1)
-        rtrn += '{})\n'.format(delim*depth)
+        if type(tree[0])==str:
+            for prefix, (length, dd) in {'split':(3,0), 'repeat':(4,1), 'fold':(4,1)}.items(): 
+                if not(len(tree)==length and tree[0].startswith(prefix)): continue
+                lines = list(str_from_tree(elt, depth+dd) for elt in tree)
+                rtrn = '{}({} '.format(tab, ' '.join(piece.strip() for piece in lines[:-1]))
+                rtrn += '{}\n{})'.format( 
+                    lines[-1].split('\n')[0].strip(),
+                    '\n'.join(lines[-1].split('\n')[1:])
+                )
+                return rtrn
+        lines = list(str_from_tree(elt, depth+1) for elt in tree)
+        rtrn = '{}({}\n'.format(tab, lines[0].lstrip())
+        rtrn += '\n'.join(lines[1:])
+        rtrn += ')'
+        return rtrn
     elif type(tree) == dict: 
         for (nm, t), body in tree.items():
-            rtrn = '{}\\{}:{} -> '.format(delim*depth, nm, t) 
-            rtrn += str_from_tree(body, depth+0).lstrip()
-    return rtrn
+            rtrn = '{}\\{}:{} -> \n'.format(tab, nm, t) 
+            rtrn += str_from_tree(body, depth+0)
+            return rtrn
 
 class Parser:
     '''

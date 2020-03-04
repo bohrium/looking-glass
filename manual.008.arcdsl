@@ -20,5 +20,9 @@ pair<gridpair>
             ))
         ))
     )
-    (fst<nmbrdgrid> (argmax<nmbrdgrid> msprites \ms:nmbrdgrid -> (snd<nmbrdgrid> ms)))
+    (fst<nmbrdgrid> 
+        (unwrap_sing<nmbrdgrid>
+        (argmax<nmbrdgrid> msprites \ms:nmbrdgrid -> (snd<nmbrdgrid> ms))
+        )
+    )
 ))))

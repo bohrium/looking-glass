@@ -205,7 +205,7 @@ class WeightLearner:
 
         return loss
 
-    def compute_weights(self, schedule=[(100,0.2),(100,0.05),]):
+    def compute_weights(self, schedule=[(10,0.5),(10,0.1),(10,0.02),(10,0.004),]):
         '''
             Fit a model
                 P(atom | parent,resources) ~
