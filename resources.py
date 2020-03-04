@@ -266,6 +266,16 @@ class PrimitivesWrapper:
     @sm(tInt.frm(tInt))
     def negate(a): return 1-a
 
+    @sm(tInt.s().frm(tInt))
+    def range(a): return tuple(range(a))
+
+
+
+    @sm(tInt.frm(tInt).frm(tInt).frm(tInt))
+    def affine(m, x, b): return m*x + b
+
+
+
     @sm(tInt.frm(tInt).frm(tInt))
     def less_than(a, b): return 1 if (a<b) else 0
 
@@ -278,6 +288,13 @@ class PrimitivesWrapper:
             lhs.shape==rhs.shape
             and np.sum(np.abs(lhs-rhs))==0
         ) else 0
+
+    @sm(tInt.frm(tShape))
+    def height_C_shape_J_(s):
+        return s.shape[0]
+    @sm(tInt.frm(tShape))
+    def width_C_shape_J_(s):
+        return s.shape[1] if len(s.shape)==2 else 0
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
     #~~~~~~~~~~ 1.1 Basic Constructors  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
@@ -385,7 +402,8 @@ class PrimitivesWrapper:
     #~~~~~~~~~~ 1.3 Measuring and Moving  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
     @sm(tCell.frm(tShape))
-    def center(shape): return (shape.shape[0]//2, shape.shape[1]//2)
+    def center(shape):
+        return (shape.shape[0]//2, (shape.shape[1] if len(shape.shape)==2 else 0)//2)
     @sm(tInt.frm(tShape))
     def volume(shape): return np.sum(shape)
     @sm(tCell.frm(tDir).frm(tCell))
@@ -454,8 +472,15 @@ class PrimitivesWrapper:
 
     @sm(tInt.s().frm(tGrid))
     def columns(grid): return list(range(grid.W))
+
     @sm(tInt.s().frm(tGrid))
     def rows(grid): return list(range(grid.H))
+
+    @sm(tGrid.frm(tInt).frm(tGrid))
+    def rotate_grid(grid, nb_rots):
+        new_grid = grid.copy()
+        new_grid.rotate(nb_rots)
+        return new_grid
 
     @sm(tCell.s().frm(tDir).frm(tGrid))
     def corner(grid, direction):
@@ -477,7 +502,7 @@ class PrimitivesWrapper:
 
     @sm(tGrid.frm(tColor).frm(tShape))
     def monochrome(shape, color):
-        G = Grid(H=shape.shape[0], W=shape.shape[1])
+        G = Grid(H=shape.shape[0], W=(shape.shape[1] if len(shape.shape)==2 else 0))
         G.colors = np.array([
             [color if el else 'K' for el in row]
             for row in shape

@@ -369,10 +369,10 @@ def sample_032():
     shape_b = gen_shape(None, side=2, crop=False)
     internal_assert(not shape_eq(shape_a, shape_b), 'shapes should be distinct')
 
-    z.paint_sprite(monochrome(shape_a, color), (1,1), (0,0))
-    z.paint_sprite(monochrome(shape_a, color), (1,4), (0,0))
-    z.paint_sprite(monochrome(shape_a, color), (4,1), (0,0))
-    z.paint_sprite(monochrome(shape_b, color), (4,4), (0,0))
+    z.paint_sprite(monochrome(shape_a, color), (1,1), (1,1))
+    z.paint_sprite(monochrome(shape_a, color), (1,4), (1,1))
+    z.paint_sprite(monochrome(shape_a, color), (4,1), (1,1))
+    z.paint_sprite(monochrome(shape_b, color), (4,4), (1,1))
 
     x = z.copy()
     y = monochrome(shape_b, color)
@@ -424,9 +424,9 @@ routines = [
     #sample_007_functional,
     #sample_008,
     #sample_016,
-    sample_022,
-    sample_023,
-    sample_032,
+    #sample_022,
+    #sample_023,
+    #sample_032,
     sample_034,
     sample_037,
 ]

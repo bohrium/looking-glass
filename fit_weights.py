@@ -63,7 +63,10 @@ class WeightLearner:
 
         self.actions = Index({'root', 'resource'})
         self.parents = Index()
+        self.poly = Index()
         self.types   = Index({None})
+
+        self.regularizer = 0.0001
 
     # TODO: update nomenclature in this method
     def observe_datapoint(
@@ -72,6 +75,7 @@ class WeightLearner:
         head= 'resource' if head in resources else head
         self.actions.add(head)
         self.parents.add(parent)
+        self.poly.add(parent[:parent.find('<')] if '<' in parent else parent)
         self.parents.add(grandparent)
 
         self.train_set.append(Datapoint(
@@ -142,9 +146,11 @@ class WeightLearner:
     def initialize_weights(self):
         out_dim = len(self.actions)
         par_dim = len(self.parents) 
+        pol_dim = len(self.poly) 
         typ_dim = len(self.types) 
 
         self.w_unigram   = np.full(          out_dim,  0.0)
+        self.w_parentpoly= np.full((pol_dim, out_dim), 0.0)
         self.w_parent    = np.full((par_dim, out_dim), 0.0)
         self.w_grandp    = np.full((par_dim, out_dim), 0.0)
         self.w_vailres   = np.full((typ_dim, out_dim), 0.0)
@@ -155,6 +161,7 @@ class WeightLearner:
         self, parent, grandp, vailresources, lastres, depth
     ):
         parent_idx = self.parents.idx(parent) 
+        parentpoly_idx = self.poly.idx(parent[:parent.find('<')] if '<' in parent else parent)
         grandp_idx = self.parents.idx(grandp) 
         vailres_indices = [
             self.types.idx(res) for res in vailresources
@@ -163,7 +170,7 @@ class WeightLearner:
         lastres_idx = self.types.idx(lastres)
 
         as_array = self.predict_logits_by_indices(
-            parent_idx, grandp_idx, vailres_indices, lastres_idx, depth
+            parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth
         )
         return {
             a : as_array[i]
@@ -171,44 +178,69 @@ class WeightLearner:
         }
 
     def predict_logits_by_indices(
-        self, parent_idx, grandp_idx, vailres_indices, lastres_idx, depth
+        self, parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth
     ):
         logits = (
                  self.w_unigram
             +    (self.w_parent [parent_idx] if parent_idx is not None else 0)
+            +    (self.w_parentpoly [parentpoly_idx] if parentpoly_idx is not None else 0)
             +    (self.w_grandp [grandp_idx] if grandp_idx is not None else 0)
             +sum(self.w_vailres[        idx] for idx in vailres_indices)
             +    (self.w_lastres[lastres_idx] if lastres_idx is not None else 0)
             +    self.w_depth * depth / 10.0
         )
-        clipped = np.maximum(logits - np.amax(logits), -10.0)
-        return clipped 
+        #clipped = np.maximum(logits - np.amax(logits), -10.0)
+        return logits - np.amax(logits)
+
+    def get_density(self):
+        p = float(len(np.nonzero(self.w_parent)[0]))/(self.w_parent.shape[0]*self.w_parent.shape[1])
+        g = float(len(np.nonzero(self.w_grandp)[0]))/(self.w_grandp.shape[0]*self.w_grandp.shape[1])
+        r = float(len(np.nonzero(self.w_vailres)[0]))/(self.w_vailres.shape[0]*self.w_vailres.shape[1])
+        l = float(len(np.nonzero(self.w_lastres)[0]))/(self.w_lastres.shape[0]*self.w_lastres.shape[1])
+        return (p, g, r, l)
 
     def grad_update(
         self,
         action_idx,
-        parent_idx, grandp_idx, vailres_indices, lastres_idx, depth,
-        learning_rate, regularizer=0.1
+        parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth,
+        learning_rate  
     ):
         unnormalized_probs = np.exp(self.predict_logits_by_indices(
-            parent_idx, grandp_idx, vailres_indices, lastres_idx, depth
+            parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth
         ))
         diffs = unnormalized_probs / np.sum(unnormalized_probs)
         loss = -np.log(diffs[action_idx]) 
         diffs[action_idx] -= 1.0
         # diffs times data gives loss
+        update = learning_rate * diffs
 
-        self.w_unigram              -= learning_rate * (diffs                                                )  
-        self.w_parent [parent_idx]  -= learning_rate * (diffs         + regularizer * np.sign(self.w_parent[parent_idx]))
-        self.w_grandp [grandp_idx]  -= learning_rate * (diffs         + regularizer * np.sign(self.w_grandp[grandp_idx]))
+        self.w_unigram              -= update
+        self.w_parent [parent_idx]  -= update
+        self.w_parentpoly [parentpoly_idx]  -= update
+        self.w_grandp [grandp_idx]  -= update
         for idx in vailres_indices:
-            self.w_vailres[idx]     -= learning_rate * (diffs         + regularizer * np.sign(self.w_vailres[idx]))
-        self.w_lastres[lastres_idx] -= learning_rate * (diffs         + regularizer * np.sign(self.w_lastres[lastres_idx]))
-        self.w_depth                -= learning_rate * (diffs * depth / 10.0                               )
+            self.w_vailres[idx]     -= update
+        self.w_lastres[lastres_idx] -= update
+        self.w_depth                -= update * depth / 10.0
+
+        lr_reg = learning_rate * self.regularizer
+        self.w_parent -= lr_reg * np.sign(self.w_parent)
+        self.w_parentpoly -= lr_reg * np.sign(self.w_parentpoly)
+        self.w_grandp -= lr_reg * np.sign(self.w_grandp)
+        self.w_vailres -= lr_reg * np.sign(self.w_vailres)
+        self.w_lastres -= lr_reg * np.sign(self.w_lastres)
+
+        self.w_parent[np.abs(self.w_parent) < lr_reg] = 0.0
+        self.w_grandp[np.abs(self.w_grandp) < lr_reg] = 0.0
+        self.w_vailres[np.abs(self.w_vailres) < lr_reg] = 0.0
+        self.w_lastres[np.abs(self.w_lastres) < lr_reg] = 0.0
 
         return loss
 
-    def compute_weights(self, schedule=[(10,0.5),(10,0.1),(10,0.02),(10,0.004),]):
+    def compute_weights(self,
+        #schedule=[(10,0.5),(20,0.1),(40,0.02),(80,0.004)]
+        schedule=[(10,0.5),(10,0.1),(10,0.02),(10,0.004)]
+    ):
         '''
             Fit a model
                 P(atom | parent,resources) ~
@@ -228,6 +260,7 @@ class WeightLearner:
                 for action, parent, grandp, vailresources, lastres, depth in train:
                     action_idx = self.actions.idx(action) 
                     parent_idx = self.parents.idx(parent) 
+                    parentpoly_idx = self.poly.idx(parent[:parent.find('<')] if '<' in parent else parent)
                     grandp_idx = self.parents.idx(grandp) 
 
                     vailres_indices = [self.types.idx(res) for res in vailresources]
@@ -235,12 +268,16 @@ class WeightLearner:
 
                     sum_loss += self.grad_update(
                         action_idx,
-                        parent_idx, grandp_idx, vailres_indices, lastres_idx, depth,
+                        parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth,
                         learning_rate = eta
                     )
             total_T += T
+            p,g,r,l = self.get_density()
             print(CC + 'perplexity @R {:.2f} @D after @G {} @D epochs'.format(
-                np.exp(sum_loss/(T*len(self.train_set))), total_T
+                np.exp(sum_loss/(T*len(self.train_set))), total_T 
+            ))
+            print(CC + '\tdensities p=@O {:.2f} @D g=@O {:.2f} @D r=@O {:.2f} @D l=@O {:.2f} @D '.format(
+                p,g,r,l
             ))
 
 if __name__=='__main__':

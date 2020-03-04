@@ -32,7 +32,7 @@ from inject import InjectivityAnalyzer
 #=============================================================================#
 
 class GrammarSampler:
-    def __init__(self, verbose=False, depth_bound=20):
+    def __init__(self, verbose=False, depth_bound=15):
         self.primitives = PrimitivesWrapper().primitives
         self.verbose = verbose
         self.timeout_prob = 1e-2
@@ -41,6 +41,7 @@ class GrammarSampler:
         self.var_count = 0
 
         self.weights = WeightLearner()
+        self.C = InjectivityAnalyzer()
 
     def learn_from(self, trees):
         for t in trees:
@@ -158,8 +159,7 @@ class GrammarSampler:
                 )
             )
 
-    def tenacious_construct(self, goal):
-        primitives = PrimitivesWrapper().primitives
+    def tenacious_construct(self, goal, inner_execs=10):
         it = range(self.nb_tries) 
         if not self.verbose: it = tqdm.tqdm(it)
         for _ in it:
@@ -167,16 +167,18 @@ class GrammarSampler:
                 code = self.construct(goal)
                 P = Parser(code)
                 t = P.get_tree()
-                if not C.is_interesting(t):
-                    print(CC+'@R uninteresting! @D ')
-                    assert False
-                for _ in range(100):
+                #print(CC+'found... \n@P {} @D '.format(str_from_tree(t)))
+                #if not self.C.is_interesting(t):
+                #    print(CC+'@R uninteresting! @D ')
+                #    assert False
+                msgs = set([])
+                for _ in range(inner_execs):
                     try:
-                        x,y = evaluate_tree(t, primitives)
-                        x_,y_ = evaluate_tree(t, primitives)
-                        #if set(e for r in y.colors for e in r)=={'K'}:
-                        #    print(CC+'@R all blank! @D ')
-                        #    assert False
+                        x,y = evaluate_tree(t, self.primitives)
+                        #x_,y_ = evaluate_tree(t, self.primitives)
+                        if set(e for r in y.colors for e in r)=={'K'}:
+                            print(CC+'@R all blank! @D ')
+                            assert False
                         #if y and y_: 
                         #    print(CC+'@R constant! @D ')
                         #    assert False
@@ -184,8 +186,10 @@ class GrammarSampler:
                         #    print(CC+'@R identity! @D ')
                         #    assert False
                         break
-
-                    except InternalError:
+                    except InternalError as e:
+                        if e.msg not in msgs:
+                            print(e.msg)
+                            msgs.add(e.msg)
                         continue
                 else:
                     print(CC+'@R unrunnable! @D ')
@@ -209,6 +213,8 @@ if __name__=='__main__':
         'manual.016.arcdsl',
         'manual.022.arcdsl',
         'manual.023.arcdsl',
+        'manual.032.arcdsl',
+        'manual.034.arcdsl',
     ]
     trees = []
     for file_nm in CODE_FILE_NMS:
@@ -216,38 +222,36 @@ if __name__=='__main__':
             trees.append(Parser(f.read()).get_tree())
     GS.learn_from(trees)
 
-    C = InjectivityAnalyzer(verbose=False)
-    print(CC+'@P sampling new program...@D ')
-    for _ in range(1):
-        try:
-            code = GS.tenacious_construct(tGridPair) 
-            P = Parser(code)
-            t = P.get_tree()
-            break
-        except TypeError:
-            continue
-    print(CC+'@O ')
-    print(CC+'found... \n@P {} @D '.format(str_from_tree(t)))
-    print(CC+'@D ')
-
-    print(CC+'@P executing program...@D ')
-    input()
-    primitives = PrimitivesWrapper().primitives
-    for _ in range(2):
-        for _ in range(100):
+    for I in range(10):
+        print(CC+'@P sampling new program...@D ')
+        for _ in range(1):
             try:
-                x0, y0 = evaluate_tree(t, primitives)
-                x1, y1 = evaluate_tree(t, primitives)
-                x2, y2 = evaluate_tree(t, primitives)
-                print(CC+str_from_grids([
-                    x0.colors, y0.colors,
-                    x1.colors, y1.colors,
-                    x2.colors, y2.colors,
-                ], render_color))
+                code = GS.tenacious_construct(tGridPair) 
+                P = Parser(code)
+                t = P.get_tree()
                 break
-            except InternalError:
+            except TypeError:
                 continue
+        print(CC+'@O ')
+        print(CC+'found... \n@P {} @D '.format(str_from_tree(t)))
+        print(CC+'@D ')
+        with open('moo{:02d}.arcdsl'.format(I), 'w') as f:
+            f.write(str_from_tree(t))
 
+        print(CC+'@P executing program {}...@D '.format(I))
+        input()
+        primitives = PrimitivesWrapper().primitives
 
-
+        for _ in range(2):
+            xys = [] 
+            for _ in range(3):
+                for _ in range(10):
+                    try:
+                        xys += list(evaluate_tree(t, primitives))
+                        break
+                    except InternalError:
+                        continue
+            print(CC+str_from_grids([
+                z.colors for z in xys
+            ], render_color))
 

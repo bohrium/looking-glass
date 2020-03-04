@@ -9,7 +9,7 @@ from utils import InternalError                         # maybe
 from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
 
-from parse import Parser, str_from_tree
+from parse import Parser, str_from_tree_flat, str_from_tree
 from fit_weights import WeightLearner
 from resources import PrimitivesWrapper
 from vis import str_from_grids, render_color
@@ -18,15 +18,15 @@ from vis import str_from_grids, render_color
 where = ''
 def evaluate_tree(tree, resources, depth=0):
     global where 
-    tab = ' '*depth
+    tab = '|  '*depth
     if type(tree)==type(''):
         rtrn = resources[tree][0] # get implementation instead of type
         if type(rtrn)==type('') and (rtrn in resources):
-            where += '{}resource @B {} \n@D '.format(tab, str_from_tree(tree))
+            where += '{}resource @B {} \n@D '.format(tab, str_from_tree_flat(tree))
             rtrn = evaluate_tree(rtrn, resources, depth+1)
         return rtrn
     elif type(tree)==type({}):
-        where += '{}lambda @G {} \n@D '.format(tab, str_from_tree(tree))
+        where += '{}lambda @G {} \n@D '.format(tab, str_from_tree_flat(tree))
         for (var_nm, var_type), body in tree.items():
             return (lambda x:
                 evaluate_tree(body, {
@@ -35,23 +35,25 @@ def evaluate_tree(tree, resources, depth=0):
             )
     else:
         caller, args = tree[0], tree[1:]
-        where += '{}caller @P {} \n@D '.format(tab, str_from_tree(caller))
+        where += '{}caller @P {} \n@D '.format(tab, str_from_tree_flat(caller))
         partial = evaluate_tree(caller, resources, depth+1)
         for arg in args:
-            where += '{}arg @O {} \n@D '.format(tab, str_from_tree(arg))
+            where += '{}arg @O {} \n@D '.format(tab, str_from_tree_flat(arg))
             aa = evaluate_tree(arg, resources, depth+1)
-            where += '{}appl @R \n@D '.format(tab)
+            #where += '{}appl @R \n@D '.format(tab)
             partial = partial(aa)
         return partial
 
 if __name__=='__main__':
-    CODE_FILE_NM = 'manual.003.arcdsl'
+    #CODE_FILE_NM = 'manual.003.arcdsl'
     #CODE_FILE_NM = 'manual.006.arcdsl'
     #CODE_FILE_NM = 'manual.007.arcdsl'
     #CODE_FILE_NM = 'manual.008.arcdsl'
     #CODE_FILE_NM = 'manual.016.arcdsl'
     #CODE_FILE_NM = 'manual.022.arcdsl'
     #CODE_FILE_NM = 'manual.023.arcdsl'
+    #CODE_FILE_NM = 'manual.032.arcdsl'
+    CODE_FILE_NM = 'manual.034.arcdsl'
     with open(CODE_FILE_NM) as f:
         code = f.read()
     print(CC+'parsing @P {}@D ...'.format(CODE_FILE_NM))
@@ -61,15 +63,17 @@ if __name__=='__main__':
 
     print(CC+'sampling from @P {}@D ...'.format(CODE_FILE_NM))
     primitives = PrimitivesWrapper().primitives
-    while True:
+    for I in range(100):
        try:
            where = ''
            x,y = evaluate_tree(t, primitives)
+           print(I)
            print(CC+str_from_grids([x.colors, y.colors], render_color))
            break
        except InternalError:
            continue
-       except:
+       except TypeError as e:
            print(CC+where)
-           assert False
+           print(e)
+           break
 

@@ -49,6 +49,7 @@ class Grid:
         return G
 
     def rotate(self, rotations):
+        internal_assert(self.H*self.W, 'cannot rotate vacuous grid')
         self.colors = np.rot90(self.colors, rotations)
         self.occupd = np.rot90(self.occupd, rotations)
         if rotations%2:
