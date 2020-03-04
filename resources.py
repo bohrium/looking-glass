@@ -224,6 +224,7 @@ class PrimitivesWrapper:
         lg_type = elt.s().frm(tInt.frm(elt)).frm(elt.s())
         def impl(elts):
             def impl_inner(score):
+                if not elts: return elts
                 scored_elts = [(score(e), e) for e in elts] 
                 m = max(se[0] for se in scored_elts)
                 f = tuple(e for s,e in scored_elts if s==m)

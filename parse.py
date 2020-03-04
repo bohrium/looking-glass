@@ -52,7 +52,7 @@ def str_from_tree(tree, depth=0, delim='   '):
     tab = delim*depth
 
     as_flat = '{}{}'.format(tab, str_from_tree_flat(tree))
-    if len(as_flat) < 80:
+    if len(as_flat) < 40:
         return as_flat
 
     if type(tree) == str:

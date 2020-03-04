@@ -35,8 +35,8 @@ class GrammarSampler:
     def __init__(self, verbose=False, depth_bound=20):
         self.primitives = PrimitivesWrapper().primitives
         self.verbose = verbose
-        self.timeout_prob = 3e-2
-        self.nb_tries = 10**2
+        self.timeout_prob = 1e-2
+        self.nb_tries = 10**3
         self.depth_bound = depth_bound
         self.var_count = 0
 
@@ -99,8 +99,19 @@ class GrammarSampler:
             lastres         =   lastres                     ,
             depth           =   depth                       ,
         )
+        ss = [logits_by_name[m.token] for m in matches if m.token in logits_by_name]
+        pre(ss, 'no matches')
+        #if not ss:
+        #    print(CC+'\n@R {} @G {} @D '.format(len(logits_by_name), sorted(list(logits_by_name.keys())[:5])))
+        #    print(CC+'@R {} @P {} @D '.format(len(matches), sorted(list(m.token for m in matches)[:5])))
+        #    input()
+        mm = max(
+            logits_by_name[m.token]
+            for m in matches
+            if m.token in logits_by_name
+        )
         probs = np.array([
-            np.exp(logits_by_name[m.token])
+            np.exp(logits_by_name[m.token]-mm)
             if m.token in logits_by_name else 0.0
             for m in matches
         ])
@@ -123,7 +134,7 @@ class GrammarSampler:
                 depth           =   depth+1     ,
             )
             return (
-                '(\\{}:{} -> \n{})'.format(var_nm, str(goal.arg), body)
+                '\\{}:{} -> \n{}'.format(var_nm, str(goal.arg), body)
             )
         else:
             if self.verbose:
@@ -156,22 +167,22 @@ class GrammarSampler:
                 code = self.construct(goal)
                 P = Parser(code)
                 t = P.get_tree()
-                #if not C.is_interesting(t):
-                #    print(CC+'@R uninteresting! @D ')
-                #    assert False
+                if not C.is_interesting(t):
+                    print(CC+'@R uninteresting! @D ')
+                    assert False
                 for _ in range(100):
                     try:
                         x,y = evaluate_tree(t, primitives)
                         x_,y_ = evaluate_tree(t, primitives)
-                        if set(e for r in y.colors for e in r)=={'K'}:
-                            print(CC+'@R all blank! @D ')
-                            assert False
-                        if y and y_: 
-                            print(CC+'@R constant! @D ')
-                            assert False
-                        if x==y and x_==y_: 
-                            print(CC+'@R identity! @D ')
-                            assert False
+                        #if set(e for r in y.colors for e in r)=={'K'}:
+                        #    print(CC+'@R all blank! @D ')
+                        #    assert False
+                        #if y and y_: 
+                        #    print(CC+'@R constant! @D ')
+                        #    assert False
+                        #if x==y and x_==y_: 
+                        #    print(CC+'@R identity! @D ')
+                        #    assert False
                         break
 
                     except InternalError:
@@ -197,6 +208,7 @@ if __name__=='__main__':
         'manual.008.arcdsl',
         'manual.016.arcdsl',
         'manual.022.arcdsl',
+        'manual.023.arcdsl',
     ]
     trees = []
     for file_nm in CODE_FILE_NMS:
@@ -206,7 +218,7 @@ if __name__=='__main__':
 
     C = InjectivityAnalyzer(verbose=False)
     print(CC+'@P sampling new program...@D ')
-    for _ in range(50):
+    for _ in range(1):
         try:
             code = GS.tenacious_construct(tGridPair) 
             P = Parser(code)

@@ -55,7 +55,7 @@ class Index:
     def __len__(self):
         return len(self.indices_by_elt)
     def idx(self, elt):
-        return self.indices_by_elt[elt]
+        return self.indices_by_elt[elt] if elt in self.indices_by_elt else None
 
 class WeightLearner: 
     def __init__(self):
@@ -67,15 +67,15 @@ class WeightLearner:
 
     # TODO: update nomenclature in this method
     def observe_datapoint(
-        self, atom, parent, grandparent, resources, lastres, depth
+        self, head, parent, grandparent, resources, lastres, depth
     ):
-        atom = 'resource' if atom in resources else atom
-        self.actions.add(atom)
+        head= 'resource' if head in resources else head
+        self.actions.add(head)
         self.parents.add(parent)
         self.parents.add(grandparent)
 
         self.train_set.append(Datapoint(
-            atom,
+            head,
             parent,
             grandparent,
             set(resources.values()),
@@ -127,7 +127,7 @@ class WeightLearner:
             caller, args = tree[0], tree[1:]
             new_parent = lambda i: (
                 (caller, i) if type(caller)==str else
-                pre(False, 'expected {}'.format(caller))
+                pre(False, 'expected {} to be a string'.format(caller))
             )
             for i, arg in enumerate(args):
                 self.observe_tree(
@@ -156,7 +156,10 @@ class WeightLearner:
     ):
         parent_idx = self.parents.idx(parent) 
         grandp_idx = self.parents.idx(grandp) 
-        vailres_indices = [self.types.idx(res) for res in vailresources]
+        vailres_indices = [
+            self.types.idx(res) for res in vailresources
+            if res in self.types.as_dict()
+        ]
         lastres_idx = self.types.idx(lastres)
 
         as_array = self.predict_logits_by_indices(
@@ -172,10 +175,10 @@ class WeightLearner:
     ):
         logits = (
                  self.w_unigram
-            +    self.w_parent [parent_idx]
-            +    self.w_grandp [grandp_idx]
+            +    (self.w_parent [parent_idx] if parent_idx is not None else 0)
+            +    (self.w_grandp [grandp_idx] if grandp_idx is not None else 0)
             +sum(self.w_vailres[        idx] for idx in vailres_indices)
-            +    self.w_lastres[lastres_idx]
+            +    (self.w_lastres[lastres_idx] if lastres_idx is not None else 0)
             +    self.w_depth * depth / 10.0
         )
         clipped = np.maximum(logits - np.amax(logits), -10.0)
