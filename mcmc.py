@@ -27,6 +27,7 @@ from resources import PrimitivesWrapper
 from demo import evaluate_tree
 from vis import str_from_grids, render_color
 from inject import InjectivityAnalyzer
+from grid import Grid
 
 class MetropolisHastingsSampler:
     def __init__(self):
@@ -192,7 +193,13 @@ class MetropolisHastingsSampler:
     
     def init_propose(self):
         code = '''
-            (pair<gridpair> (new_grid two two) (new_grid two two))
+            (
+            split<color><gridpair> (rainbow noise) \\cc:color -> ( 
+            split<shape><gridpair> (gen_shape noise four) \\ss:shape -> (
+            pair<gridpair>
+                (monochrome ss cc)
+                (rotate_grid (monochrome ss gray) one)
+            )))
         ''' 
         return Parser(code).get_tree()
     
@@ -250,7 +257,8 @@ class MetropolisHastingsSampler:
             imprimitives    should be a dictionary of types by name
         '''
         #print(depth)
-        #internal_assert(depth < self.depth_bound, 'uh oh!')
+        internal_assert(depth < self.depth_bound, 'depth exceeded')
+        internal_assert(not bernoulli(0.01),      'random timeout')
 
         matches = [
             MetropolisHastingsSampler.Match(nm, nm, hypoths)
@@ -339,6 +347,25 @@ class MetropolisHastingsSampler:
         mh_correction = - np.log(nb_nodes(new_tree)) + np.log(nb_nodes(old_tree)) 
 
         d_ll = mh_correction #+ new_ll - old_ll  
+        x,y = None, None
+        try:
+            x, y = evaluate_tree(new_tree, self.primitives)
+        except:
+            d_ll -= 5.0
+        if type(y)==Grid:
+            colors = set(e for r in y.colors for e in r)
+            if colors in [{'K'}, set([])]:
+                d_ll -= 2.0
+            elif len(colors)==1:
+                d_ll -= 1.0
+
+        if type(x)==Grid:
+            colors = set(e for r in x.colors for e in r)
+            if colors in [{'K'}, set([])]:
+                d_ll -= 2.0
+            elif len(colors)==1:
+                d_ll -= 1.0
+
         u = uniform(1.0)
         if u < np.exp(d_ll): 
             print(CC+'@G accept! {:.2f} {:.2f} {:.2f} @D '.format(u, np.exp(d_ll), d_ll))
@@ -351,8 +378,12 @@ class MetropolisHastingsSampler:
 if __name__=='__main__':
     MHS = MetropolisHastingsSampler()
     t, l = MHS.sample(1)
-    for _ in range(1000):
-        t, l = MHS.sample(10, t)
+    for i in range(10000):
+        print(CC, '@R {}@D '.format(i))
+        if i%100==0:
+            with open('mcmc.{:06d}.arcdsl', 'w') as f:
+                f.write(str_from_tree(t))
+        t, l = MHS.sample(1, t)
         try:
             x, y = evaluate_tree(t, MHS.primitives)
             print(CC+str_from_grids([
