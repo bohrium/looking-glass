@@ -1,0 +1,22 @@
+(split<int><gridpair> (svrl noise) \x1:int ->
+(split<shape><gridpair> (gen_shape noise x1) \x2:shape ->
+(split<shape><gridpair> x2 \x3:shape ->
+(split<grid><gridpair> (paint_sprite
+   (reserve_shape
+      noise
+      (monochrome
+         x2
+         (cond<color> x1 cyan red))
+      x2
+      (center x2))
+   (monochrome x2 red)
+   (center x3)) \x4:grid ->
+(split<grid><gridpair> x4 \x5:grid ->
+(pair<gridpair>
+   x5
+   (paint_sprite
+      (pair<ptdgrid>
+         x4
+         (pair<cell> x1 x1))
+      x5
+      (center x3))))))))

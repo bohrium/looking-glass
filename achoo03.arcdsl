@@ -1,0 +1,6 @@
+(split<int><gridpair> (coin noise) \x1:int ->
+(split<int><gridpair> (affine one x1 two) \x2:int ->
+(split<color><gridpair> (rainbow noise) \x3:color ->
+(split<grid><gridpair> (monochrome (gen_shape noise x1) x3) \x4:grid ->
+(split<int><gridpair> (svrl noise)\x5:int -> (pair<gridpair> x4 x4)
+))))

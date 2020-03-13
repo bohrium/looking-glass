@@ -1,0 +1,34 @@
+(split<int><gridpair> (afew noise) \x1:int ->
+(split<grid><gridpair> (split<grid><grid> (fold<shape><grid> nil<shape> (new_grid (affine zero x1 two) x1) \x7:shape ->
+   \x8:grid -> 
+   (paint_sprite
+      (reserve_shape
+         noise
+         x8
+         x7
+         (pair<cell>
+            (affine
+               zero
+               x1
+               (width<shape> x7))
+            x1))
+      (monochrome x7 cyan)
+      (pair<cell>
+         (affine
+            zero
+            x1
+            (width<shape> x7))
+         zero))) \x4:grid ->
+(split<cell><grid> (pair<cell> (affine one x1 two) x1) \x5:cell ->
+(fst<ptdgrid>
+   (repeat<ptdgrid> x1 (pair<ptdgrid> x4 x5) \x6:ptdgrid ->
+      (pair<ptdgrid>
+         (paint_cell
+            x4
+            (snd<ptdgrid> x6)
+            cyan)
+         x5))))) \x2:grid ->
+(split<color><gridpair> cyan \x3:color ->
+(assert<gridpair>
+   (negate x1)
+   (pair<gridpair> x2 x2)))))

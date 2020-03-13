@@ -1,0 +1,21 @@
+(split<int><gridpair> zero \x1:int ->
+(split<{shape}><gridpair> (repeat<{shape}> x1 nil<shape> \x6:{shape} ->
+   (add<shape> x6 (gen_shape noise x1))) \x2:{shape} ->
+(split<shape><gridpair> (gen_shape noise x1) \x3:shape ->
+(split<ptdgrid><gridpair> (reserve_shape
+   noise
+   (repeat<grid> x1 (monochrome x3 red)\x5:grid -> x5
+
+   x3
+   (sample_cell
+      noise
+      (monochrome x3 cyan))) \x4:ptdgrid ->
+(pair<gridpair>
+   (paint_sprite
+      x4
+      (monochrome x3 blue)
+      (snd<ptdgrid> x4))
+   (paint_sprite
+      x4
+      (monochrome x3 blue)
+      (center x3)))))))

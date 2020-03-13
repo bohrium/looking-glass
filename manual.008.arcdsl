@@ -15,10 +15,10 @@ pair<gridpair>
         fold<nmbrdgrid><grid> msprites (new_grid side side) \ms:nmbrdgrid -> \x:grid -> ( 
         split<shape><grid> (silouhette (fst<nmbrdgrid> ms)) \s:shape -> (
         repeat<grid> (snd<nmbrdgrid> ms) x \xx:grid -> (
-            split<ptdgrid><grid> (reserve_shape noise xx s (center s)) \pg:ptdgrid -> (
-            paint_sprite (fst<ptdgrid> pg) (fst<nmbrdgrid> ms) (snd<ptdgrid> pg) (center s)
-            ))
-        ))
+            paint_sprite
+                (reserve_shape noise xx s (center s))
+                (fst<nmbrdgrid> ms) (center s)
+        )))
     )
     (fst<nmbrdgrid> 
         (unwrap_sing<nmbrdgrid>

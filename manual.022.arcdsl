@@ -13,8 +13,12 @@ repeat<gridpair> (svrl noise) (pair<gridpair> blank blank) \gp:gridpair -> (
         (fst<ptdgrid>(
         repeat<ptdgrid> width (pair<ptdgrid> (snd<gridpair> gp) start) \pg:ptdgrid -> (
             pair<ptdgrid>
-            (paint_sprite (fst<ptdgrid> pg) tile (snd<ptdgrid> pg) (corner tile west))
-            (displace (displace (snd<ptdgrid> pg) east) east)
+            (
+                paint_sprite pg tile (corner tile west)
+            )
+            (
+                displace (displace (snd<ptdgrid> pg) east) east
+            )
         )))
 )))
 )))))))

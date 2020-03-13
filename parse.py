@@ -37,7 +37,7 @@ def get_depth(tree):
         return 1+max(get_depth(elt) for elt in tree)
     elif type(tree) == dict: 
         for (nm, t), body in tree.items():
-            return 0+max(get_depth(body) for elt in tree)
+            return 1+get_depth(body)
 
 def str_from_tree_flat(tree):
     if type(tree) == str:
@@ -89,7 +89,9 @@ class Parser:
     BRACKETS = '<>-{}'
 
     def __init__(self, string):
-        self.string = string
+        self.string = '\n'.join(
+            ln for ln in string.split('\n') if not ln.startswith('//')
+        )
         self.i=0
 
     def parse_assert(self, cond, message):

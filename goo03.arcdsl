@@ -1,0 +1,13 @@
+(split<int><gridpair> (many noise) \x1:int ->
+(split<{shape}><gridpair> (holes_of large_square) \x2:{shape} ->
+(split<grid><gridpair> (monochrome
+   (gen_shape
+      noise
+      (less_than (afew noise) zero))
+   (cond<color>
+      x1
+      cyan
+      (rainbow noise))) \x3:grid ->
+(pair<gridpair>
+   (reflect_grid x3 northwest)
+   x3))))

@@ -1,0 +1,41 @@
+(split<int><gridpair> (many noise) \x1:int ->
+(split<grid><gridpair> (reflect_grid
+   (new_grid x1 x1)
+   northwest) \x2:grid ->
+(fold<int><gridpair> (rows x2) (pair<gridpair> x2 x2) \x3:int ->
+   \x4:gridpair -> 
+   (cond<gridpair>
+      (many noise)
+      (pair<gridpair>
+         (paint_row
+            (snd<gridpair> x4)
+            x3
+            gray)
+         (paint_row
+            (paint_row
+               x2
+               x1
+               (rainbow noise))
+            x3
+            (rainbow noise)))
+      (pair<gridpair>
+         (split<grid><grid> (snd<gridpair> x4) \x9:grid ->
+         (split<cell><grid> (sample_cell noise x2) \x10:cell ->
+         (paint_cell
+            x9
+            x10
+            (rainbow noise))))
+         (split<{nmbrdcolor}><grid> (map<int><nmbrdcolor>
+            (columns x2)
+            \x8:int -> 
+            (pair<nmbrdcolor>
+               x8
+               (rainbow noise))) \x5:{nmbrdcolor} ->
+         (fold<nmbrdcolor><grid> x5 (fst<gridpair> x4) \x6:nmbrdcolor ->
+            \x7:grid -> 
+            (paint_cell
+               x2
+               (pair<cell>
+                  (fst<nmbrdcolor> x6)
+                  x3)
+               (snd<nmbrdcolor> x6)))))))))

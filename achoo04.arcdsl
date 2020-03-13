@@ -1,0 +1,18 @@
+(split<int><gridpair> (many noise) \x1:int ->
+(split<grid><gridpair> (split<grid><grid> (new_grid x1 x1) \x4:grid ->
+(split<cell><grid> (pair<cell>
+   (fst<nmbrdcolor>
+      (pair<nmbrdcolor> x1 brown))
+   x1) \x5:cell ->
+(fst<ptdgrid>
+   (repeat<ptdgrid> x1 (pair<ptdgrid> x4 x5) \x6:ptdgrid ->
+      (pair<ptdgrid>
+         (paint_cell
+            x4
+            (snd<ptdgrid> x6)
+            cyan)
+         (displace x5 west)))))) \x2:grid ->
+(split<color><gridpair> gray \x3:color ->
+(assert<gridpair>
+   x1
+   (pair<gridpair> x2 x2)))))

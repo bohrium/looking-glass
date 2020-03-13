@@ -1,0 +1,54 @@
+(split<int><gridpair> (many noise) \x1:int ->
+(split<int><gridpair> x1 \x2:int ->
+(fold<int><gridpair> (rows
+      (fold<shape><grid> (add<shape>
+            nil<shape>
+            (gen_shape noise x2)) (new_grid x2 x2) \x6:shape ->
+         \x7:grid -> 
+         (paint_sprite
+            (reserve_shape
+               noise
+               x7
+               x6
+               (sample_cell noise x7))
+            (monochrome x6 blue)
+            (pair<cell>
+               (fst<nmbrdcolor>
+                  (pair<nmbrdcolor>
+                     x2
+                     blue))
+               x2)))) (pair<gridpair>
+      (split<grid><grid> (new_grid x2 x2)\x5:grid -> x5
+
+      (monochrome
+         (silouhette (new_grid x2 x2))
+         (rainbow noise))) \x3:int ->
+   \x4:gridpair -> 
+   (cond<gridpair>
+      (coin noise)
+      (pair<gridpair>
+         (paint_row
+            (paint_row
+               (monochrome
+                  large_square
+                  (rainbow noise))
+               x1
+               (rainbow noise))
+            x2
+            gray)
+         (paint_row
+            (paint_row
+               (paint_row
+                  (snd<gridpair> x4)
+                  x3
+                  (rainbow noise))
+               x3
+               (rainbow noise))
+            x3
+            (rainbow noise)))
+      (pair<gridpair>
+         (snd<gridpair> x4)
+         (paint_row
+            (fst<gridpair> x4)
+            x1
+            (rainbow noise)))))))

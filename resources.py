@@ -235,8 +235,10 @@ class PrimitivesWrapper:
         name = 'unwrap_sing<{}>'.format(elt)
         lg_type = elt.frm(elt.s())
         def impl(elts):
-            internal_assert(len(elts)==1, 'can only unwrap singleton')
-            return elts[0]
+            #internal_assert(len(elts)==1, 'can only unwrap singleton')
+            #return elts[0]
+            internal_assert(len(elts), 'can only unwrap singleton')
+            return elts[np.random.choice(len(elts))]
         self.primitives[name] = (impl, lg_type)
 
     def __make_assert__(self, goal):
@@ -360,7 +362,8 @@ class PrimitivesWrapper:
 
     @sm(tShape.frm(tInt).frm(tNoise))
     def gen_shape(noise, side):
-        internal_assert(1<=side<=6, 'requested shape sidelength illegal')
+        #internal_assert(1<=side<=6, 'requested shape sidelength illegal')
+        if not (1<=side<=6): side=6
         SG = ShapeGen()
         SG.set_side(side)
         shape = SG.search(crop=True) 
@@ -482,6 +485,12 @@ class PrimitivesWrapper:
         new_grid.rotate(nb_rots)
         return new_grid
 
+    @sm(tGrid.frm(tDir).frm(tGrid))
+    def reflect_grid(grid, axis_dir):
+        new_grid = grid.copy()
+        new_grid.reflect(axis_dir)
+        return new_grid
+
     @sm(tCell.s().frm(tDir).frm(tGrid))
     def corner(grid, direction):
         h,w = direction
@@ -527,16 +536,21 @@ class PrimitivesWrapper:
         cell = new_grid.reserve_shape(shape, cell_in_shape, spacious=True)
         return (new_grid, cell) 
 
-    @sm(tGrid.frm(tCell).frm(tCell).frm(tGrid).frm(tGrid))
-    def paint_sprite(field, sprite, cell_in_field, cell_in_sprite):
-        new_grid = field.copy()
-        new_grid.paint_sprite(sprite, cell_in_field, cell_in_sprite)
+    @sm(tGrid.frm(tCell).frm(tGrid).frm(tPtdGrid))
+    def paint_sprite(ptd_field, sprite, cell_in_sprite):
+        new_grid = ptd_field[0].copy()
+        new_grid.paint_sprite(sprite, ptd_field[1], cell_in_sprite)
         return new_grid
+
     @sm(tGrid.frm(tColor).frm(tCell).frm(tGrid))
     def paint_cell(field, cell, color):
-        internal_assert(0<=cell[0]<field.H and 0<=cell[1]<field.W,
-            'cell out of bounds!'
+        internal_assert(0<field.H and 0<field.W,
+            'cannot paint vacuous grid!'
         )
+        if not (0<=cell[0]<field.H and 0<=cell[1]<field.W): cell = (0,0)
+        #internal_assert(0<=cell[0]<field.H and 0<=cell[1]<field.W,
+        #    'cell out of bounds!'
+        #)
         new_grid = field.copy()
         new_grid.paint_cell(cell, color)
         return new_grid
@@ -551,23 +565,33 @@ class PrimitivesWrapper:
         new_grid.paint_column(row_nb, color)
         return new_grid
 
+    @sm(tGrid.frm(tColor).frm(tGrid).frm(tNoise))
+    def sprinkle(noise, field, color):
+        new_grid = field.copy()
+        new_grid.noise(color, 0.5)
+        return new_grid
+
     @sm(tGrid.frm(tCell).frm(tColor).frm(tGrid))
     def fill(field, color, cell):
-        internal_assert(0<=cell[0]<field.H and 0<=cell[1]<field.W,
-            'cell out of bounds!'
-        )
+        #internal_assert(0<=cell[0]<field.H and 0<=cell[1]<field.W,
+        #    'cell out of bounds!'
+        #)
         new_grid = field.copy()
+        if not (0<field.H and 0<field.W): return new_grid 
+        if not (0<=cell[0]<field.H and 0<=cell[1]<field.W): cell = (0,0)
         new_grid.fill(color, cell)
         return new_grid
 
-
-
     #@sm(tGrid.frm(tCell).frm(tGrid).frm(tGrid).frm(tNoise))
     #def reserve_and_paint_sprite(noise, field, sprite, cell_in_sprite):
-    #    new_grid, cell_in_field = reserve_shape(
-    #        grid, silouhette(sprite), cell_in_sprite, noise
-    #    ) 
-    #    return paint_sprite(new_grid, sprite, cell_in_field, cell_in_sprite)
+    #    shape = PrimitivesWrapper.sillouhette(sprite)
+    #    center = PrimitivesWrapper.center(shape)
+    #    new_grid, cell_in_field = PrimitivesWrapper.reserve_shape(
+    #        noise, grid, shape, center
+    #    )
+    #    return PrimitivesWrapper.paint_sprite(
+    #        new_grid, sprite, cell_in_field, center
+    #    )
  
 if __name__=='__main__':
     NB_LINES_PER_FETCH = 25

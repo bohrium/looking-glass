@@ -1,0 +1,8 @@
+(split<int><gridpair> (afew noise) \x1:int ->
+(split<shape><gridpair> (gen_shape noise x1) \x2:shape ->
+(assert<gridpair>
+   x1
+   (split<grid><gridpair> (monochrome x2 gray) \x3:grid ->
+   (pair<gridpair>
+      x3
+      (monochrome x2 cyan))))))

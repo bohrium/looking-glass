@@ -23,7 +23,7 @@ from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 from parse import Parser, str_from_tree 
 from fit_weights import WeightLearner
 from resources import PrimitivesWrapper
-from solve import evaluate_tree
+from demo import evaluate_tree
 from vis import str_from_grids, render_color
 from inject import InjectivityAnalyzer
 
@@ -45,6 +45,7 @@ class GrammarSampler:
 
     def learn_from(self, trees):
         for t in trees:
+            #print('***', end=' ')
             self.weights.observe_tree(t)
         self.weights.compute_weights()
 
@@ -65,11 +66,15 @@ class GrammarSampler:
         imprimitives={},
         lastres=None,
         depth=0,
+        codepth=None,
     ):
         '''
             self.primitives should be a dictionary of types by name
             imprimitives    should be a dictionary of types by name
         '''
+        if codepth==None:
+            codepth=self.depth_bound
+
         if bernoulli(self.timeout_prob):
             pre(False, 'timeout')
         if self.verbose:
@@ -99,6 +104,7 @@ class GrammarSampler:
             vailresources   =   set(imprimitives.values())  ,
             lastres         =   lastres                     ,
             depth           =   depth                       ,
+          codepth           = codepth                       ,
         )
         ss = [logits_by_name[m.token] for m in matches if m.token in logits_by_name]
         pre(ss, 'no matches')
@@ -133,6 +139,7 @@ class GrammarSampler:
                 imprimitives    =   resources   ,
                 lastres         =   goal.arg    ,
                 depth           =   depth+1     ,
+                codepth         = max(0, codepth-1),
             )
             return (
                 '\\{}:{} -> \n{}'.format(var_nm, str(goal.arg), body)
@@ -141,6 +148,15 @@ class GrammarSampler:
             if self.verbose:
                 print(CC+'matched @P {}@D with @P {}@D '.format(goal, match.name))
 
+            get_cd = (
+                lambda i: 
+                min(codepth-1, geometric(2.0/(
+                    (self.weights.w_codepth_parent[self.weights.parents.idx((match.token, i))]
+                    if (match.token, i) in self.weights.parents.as_dict() else 0.5/codepth) + 
+                    (self.weights.w_codepth_grandp[self.weights.parents.idx(parent)]
+                    if parent in self.weights.parents.as_dict() else 0.5/codepth) 
+                )))
+            )
             hypotheses = [
                 self.construct(
                     goal            =   h               ,
@@ -149,6 +165,10 @@ class GrammarSampler:
                     imprimitives    =   imprimitives    ,
                     lastres         =   lastres         ,
                     depth           =   depth+1         ,
+                  codepth           = (
+                        #max(0,min(codepth-1,geometric(2*codepth)))
+                        get_cd(i)
+                        )
                 )
                 for i, h in enumerate(match.hypoths)
             ]
@@ -159,7 +179,7 @@ class GrammarSampler:
                 )
             )
 
-    def tenacious_construct(self, goal, inner_execs=10):
+    def tenacious_construct(self, goal, inner_execs=3):
         it = range(self.nb_tries) 
         if not self.verbose: it = tqdm.tqdm(it)
         for _ in it:
@@ -167,16 +187,15 @@ class GrammarSampler:
                 code = self.construct(goal)
                 P = Parser(code)
                 t = P.get_tree()
-                #print(CC+'found... \n@P {} @D '.format(str_from_tree(t)))
-                #if not self.C.is_interesting(t):
-                #    print(CC+'@R uninteresting! @D ')
-                #    assert False
+                if not self.C.is_interesting(t):
+                    print(CC+'@R uninteresting! @D ')
+                    assert False
                 msgs = set([])
                 for _ in range(inner_execs):
                     try:
                         x,y = evaluate_tree(t, self.primitives)
                         #x_,y_ = evaluate_tree(t, self.primitives)
-                        if set(e for r in y.colors for e in r)=={'K'}:
+                        if set(e for r in y.colors for e in r) in [{'K'}, set([])]:
                             print(CC+'@R all blank! @D ')
                             assert False
                         #if y and y_: 
@@ -188,7 +207,10 @@ class GrammarSampler:
                         break
                     except InternalError as e:
                         if e.msg not in msgs:
-                            print(e.msg)
+                            print(CC+'\n@R : @B {} @D '.format(e.msg), end='')
+                            #if e.msg.startswith('req'):
+                            #    print(str_from_tree(t))
+                            #    input()
                             msgs.add(e.msg)
                         continue
                 else:
@@ -215,6 +237,7 @@ if __name__=='__main__':
         'manual.023.arcdsl',
         'manual.032.arcdsl',
         'manual.034.arcdsl',
+        'manual.037.arcdsl',
     ]
     trees = []
     for file_nm in CODE_FILE_NMS:
@@ -234,20 +257,20 @@ if __name__=='__main__':
                 continue
         print(CC+'@O ')
         print(CC+'found... \n@P {} @D '.format(str_from_tree(t)))
+        GS.weights.observe_tree(t) # for printing
         print(CC+'@D ')
-        with open('moo{:02d}.arcdsl'.format(I), 'w') as f:
+        with open('boo{:02d}.arcdsl'.format(I), 'w') as f:
             f.write(str_from_tree(t))
 
         print(CC+'@P executing program {}...@D '.format(I))
         input()
-        primitives = PrimitivesWrapper().primitives
 
         for _ in range(2):
             xys = [] 
             for _ in range(3):
                 for _ in range(10):
                     try:
-                        xys += list(evaluate_tree(t, primitives))
+                        xys += list(evaluate_tree(t, GS.primitives))
                         break
                     except InternalError:
                         continue
@@ -255,3 +278,5 @@ if __name__=='__main__':
                 z.colors for z in xys
             ], render_color))
 
+        print(CC+'@P done executing program {}...@D '.format(I))
+        input()

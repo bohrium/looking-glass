@@ -2,6 +2,10 @@ THIS WEEK TODO
 
 ```all on branch TREE```
 
+TODO:
+    typed roots!!
+    and also goal??
+
 SAMPLE PROGRAMS FROM DSL
  >< train currently hacky fit_weights.py on one program 
  >< automate and expand the sigs_by_name for resources.py
@@ -23,6 +27,11 @@ SAMPLE PROGRAMS FROM DSL
      >< clarify whether resources is set or multiset of types (relevant to
         logistic regression in fit_weights.py and also to sampling in
         generate_script.py)
+
+
+argmax should return multiset
+unwraps gives errors
+
 
 INJECTIVITY ANALYSIS
  >< plan out

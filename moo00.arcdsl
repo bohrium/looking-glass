@@ -1,0 +1,38 @@
+(split<int><gridpair> (many noise) \x1:int ->
+(repeat<gridpair> x1 (pair<gridpair>
+      (split<grid><grid> (new_grid x1 x1) \x7:grid ->
+      (split<shape><grid> (silouhette x7) \x8:shape ->
+      (paint_sprite
+         (reserve_shape
+            noise
+            x7
+            x8
+            (center x8))
+         (monochrome x8 red)
+         (center x8))))
+      (rotate_grid (new_grid x1 x1) x1)) \x2:gridpair ->
+   (split<ptdgrid><gridpair> (reserve_shape
+      noise
+      (snd<gridpair> x2)
+      large_square
+      (sample_cell
+         noise
+         (snd<gridpair> x2))) \x3:ptdgrid ->
+   (split<cell><gridpair> (center large_plus) \x4:cell ->
+   (pair<gridpair>
+      (paint_cell
+         (paint_cell
+            (fold<shape><grid> nil<shape> (new_grid x1 x1) \x5:shape ->
+               \x6:grid -> 
+               (paint_sprite
+                  x3
+                  (monochrome x5 blue)
+                  x4))
+            x4
+            gray)
+         x4
+         gray)
+      (paint_cell
+         (fst<gridpair> x2)
+         x4
+         cyan))))))

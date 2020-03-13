@@ -1,0 +1,15 @@
+(split<int><gridpair> (many noise) \x7:int ->
+(pair<gridpair>
+   (reflect_grid
+      (new_grid x7 x7)
+      northwest)
+   (split<grid><grid> (new_grid x7 x7) \x8:grid ->
+   (fill
+      x8
+      brown
+      (pair<cell>
+         (affine
+            one
+            x7
+            (width<shape> large_plus))
+         zero)))))

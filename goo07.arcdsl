@@ -1,0 +1,36 @@
+(split<int><gridpair> three \x1:int ->
+(split<grid><gridpair> (split<grid><grid> (new_grid x1 x1) \x3:grid ->
+(split<cell><grid> (pair<cell>
+   (fst<nmbrdcolor>
+      (pair<nmbrdcolor>
+         (width<shape> (silouhette x3))
+         (rainbow noise)))
+   x1) \x4:cell ->
+(fst<ptdgrid>
+   (repeat<ptdgrid> x1 (pair<ptdgrid>
+         (fill
+            (fst<ptdgrid>
+               (repeat<ptdgrid> x1 (pair<ptdgrid> x3 x4) \x6:ptdgrid ->
+                  (pair<ptdgrid>
+                     (paint_cell
+                        x3
+                        (snd<ptdgrid>
+                           x6)
+                        gray)
+                     (displace
+                        x4
+                        southeast))))
+            gray
+            x4)
+         x4) \x5:ptdgrid ->
+      (pair<ptdgrid>
+         (paint_cell
+            x3
+            (snd<ptdgrid> x5)
+            cyan)
+         (snd<ptdgrid> x5)))))) \x2:grid ->
+(pair<gridpair>
+   (reflect_grid
+      (paint_row x2 x1 (rainbow noise))
+      northwest)
+   x2)))

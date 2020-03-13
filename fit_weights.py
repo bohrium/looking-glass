@@ -20,6 +20,7 @@ from utils import secs_endured, megs_alloced    # profiling
 from utils import reseed, bernoulli, geometric  # math
 
 from lg_types import tInt, tCell, tColor, tBlock, tGrid 
+from parse import get_depth, str_from_tree
 
 from collections import namedtuple
 
@@ -30,6 +31,8 @@ Datapoint = namedtuple('Datapoint', [
     'vailresources',
     'lastres',
     'depth',
+    'codepth',
+    'tree_idx',
 ]) 
 
 normalize = (lambda a:
@@ -64,13 +67,15 @@ class WeightLearner:
         self.actions = Index({'root', 'resource'})
         self.parents = Index()
         self.poly = Index()
-        self.types   = Index({None})
+        self.types = Index({None})
 
-        self.regularizer = 0.0001
+        self.tree_sizes = {}
+
+        self.regularizer = 0.0001#0.00001
 
     # TODO: update nomenclature in this method
     def observe_datapoint(
-        self, head, parent, grandparent, resources, lastres, depth
+        self, head, parent, grandparent, resources, lastres, depth, codepth, tree_idx
     ):
         head= 'resource' if head in resources else head
         self.actions.add(head)
@@ -85,12 +90,27 @@ class WeightLearner:
             set(resources.values()),
             lastres,
             depth,
+            codepth,
+            tree_idx,
         ))
 
-    def observe_tree(
+    def observe_tree(self, tree): 
+        tree_idx = len(self.tree_sizes)
+        old_l = len(self.train_set)
+        self.observe_tree_inner(
+            tree, parent='root', grandparent='root',
+            resources={}, lastres=None, depth=0, tree_idx=tree_idx
+        )
+        new_l = len(self.train_set)
+        self.tree_sizes[tree_idx] = new_l - old_l 
+
+    def observe_tree_inner(
         self, tree, parent='root', grandparent='root',
-        resources={}, lastres=None, depth=0
+        resources={}, lastres=None, depth=0, tree_idx=None
     ): 
+        codepth = get_depth(tree) 
+        #print(codepth, end=' ')
+
         if type(tree) == list:
             pre(type(tree[0]) == str,
                 'program not in normal form due to caller {}'.format(tree[0])
@@ -110,38 +130,46 @@ class WeightLearner:
             resources       ,
             lastres         ,
             depth           ,
+            codepth         ,
+            tree_idx        ,
         )
 
         if type(tree) == str:
             pass
         elif type(tree) == dict:
+            #print('{', end=' ')
             for (var_nm, var_type), body in tree.items():
                 self.types.add(var_type)
                 new_resources = {k:v for k,v in resources.items()}
                 new_resources[var_nm] = var_type
-                self.observe_tree(
+                self.observe_tree_inner(
                     tree            =   body            ,
                     parent          =   'root'          ,
                     grandparent     =   parent          ,
                     resources       =   new_resources   ,
                     lastres         =   var_type        ,
                     depth           =   depth+1         ,
+                    tree_idx = tree_idx
                 )
+            #print('}', end=' ')
         elif type(tree) == list:
+            #print('(', end=' ')
             caller, args = tree[0], tree[1:]
             new_parent = lambda i: (
                 (caller, i) if type(caller)==str else
                 pre(False, 'expected {} to be a string'.format(caller))
             )
             for i, arg in enumerate(args):
-                self.observe_tree(
+                self.observe_tree_inner(
                     tree            =   arg             ,
                     parent          =   new_parent(i)   ,
                     grandparent     =   parent          ,
                     resources       =   resources       ,
                     lastres         =   lastres         ,
                     depth           =   depth+1         ,
+                    tree_idx = tree_idx
                 )
+            #print(')', end=' ')
 
     def initialize_weights(self):
         out_dim = len(self.actions)
@@ -156,9 +184,13 @@ class WeightLearner:
         self.w_vailres   = np.full((typ_dim, out_dim), 0.0)
         self.w_lastres   = np.full((typ_dim, out_dim), 0.0)
         self.w_depth     = np.full(          out_dim,  0.0)
+        #self.w_codepth   = np.full(          out_dim,  0.0)
+
+        self.w_codepth_parent = np.full(par_dim,  0.01)
+        self.w_codepth_grandp = np.full(par_dim,  0.01)
 
     def predict_logits(
-        self, parent, grandp, vailresources, lastres, depth
+        self, parent, grandp, vailresources, lastres, depth, codepth
     ):
         parent_idx = self.parents.idx(parent) 
         parentpoly_idx = self.poly.idx(parent[:parent.find('<')] if '<' in parent else parent)
@@ -170,7 +202,7 @@ class WeightLearner:
         lastres_idx = self.types.idx(lastres)
 
         as_array = self.predict_logits_by_indices(
-            parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth
+            parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth, codepth
         )
         return {
             a : as_array[i]
@@ -178,7 +210,7 @@ class WeightLearner:
         }
 
     def predict_logits_by_indices(
-        self, parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth
+        self, parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth, codepth
     ):
         logits = (
                  self.w_unigram
@@ -188,6 +220,7 @@ class WeightLearner:
             +sum(self.w_vailres[        idx] for idx in vailres_indices)
             +    (self.w_lastres[lastres_idx] if lastres_idx is not None else 0)
             +    self.w_depth * depth / 10.0
+            #+    self.w_codepth * codepth / 10.0
         )
         #clipped = np.maximum(logits - np.amax(logits), -10.0)
         return logits - np.amax(logits)
@@ -202,11 +235,11 @@ class WeightLearner:
     def grad_update(
         self,
         action_idx,
-        parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth,
+        parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth, codepth,
         learning_rate  
     ):
         unnormalized_probs = np.exp(self.predict_logits_by_indices(
-            parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth
+            parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth, codepth
         ))
         diffs = unnormalized_probs / np.sum(unnormalized_probs)
         loss = -np.log(diffs[action_idx]) 
@@ -222,6 +255,7 @@ class WeightLearner:
             self.w_vailres[idx]     -= update
         self.w_lastres[lastres_idx] -= update
         self.w_depth                -= update * depth / 10.0
+        #self.w_codepth              -= update * codepth / 10.0
 
         lr_reg = learning_rate * self.regularizer
         self.w_parent -= lr_reg * np.sign(self.w_parent)
@@ -235,11 +269,26 @@ class WeightLearner:
         self.w_vailres[np.abs(self.w_vailres) < lr_reg] = 0.0
         self.w_lastres[np.abs(self.w_lastres) < lr_reg] = 0.0
 
+        # codepth prediction
+        ca = codepth * (
+            self.w_codepth_parent[parent_idx] +
+            self.w_codepth_grandp[grandp_idx]
+        )
+        codepth_update = (
+            learning_rate * (ca-1) * np.exp(-ca)
+        )
+        self.w_codepth_parent[parent_idx] -= codepth_update 
+        self.w_codepth_grandp[grandp_idx] -= codepth_update
+
+        self.w_codepth_parent[parent_idx] = np.maximum(0.01, self.w_codepth_parent[parent_idx])
+        self.w_codepth_grandp[grandp_idx] = np.maximum(0.01, self.w_codepth_grandp[grandp_idx])
+
         return loss
 
     def compute_weights(self,
         #schedule=[(10,0.5),(20,0.1),(40,0.02),(80,0.004)]
         schedule=[(10,0.5),(10,0.1),(10,0.02),(10,0.004)]
+        #schedule=[(10,0.1),(10,0.02),(10,0.004)]
     ):
         '''
             Fit a model
@@ -250,14 +299,15 @@ class WeightLearner:
                         exp(w_(atom,resource))
         '''
         self.initialize_weights()
-
+        
         total_T = 0
+        tt = float(sum(self.tree_sizes.values()))/len(self.tree_sizes)
         for T, eta in schedule:
             sum_loss = 0.0 
             for _ in range(T):
                 train = list(self.train_set)
                 np.random.shuffle(train) 
-                for action, parent, grandp, vailresources, lastres, depth in train:
+                for action, parent, grandp, vailresources, lastres, depth, codepth, tree_idx in train:
                     action_idx = self.actions.idx(action) 
                     parent_idx = self.parents.idx(parent) 
                     parentpoly_idx = self.poly.idx(parent[:parent.find('<')] if '<' in parent else parent)
@@ -268,8 +318,8 @@ class WeightLearner:
 
                     sum_loss += self.grad_update(
                         action_idx,
-                        parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth,
-                        learning_rate = eta
+                        parent_idx, parentpoly_idx, grandp_idx, vailres_indices, lastres_idx, depth, codepth,
+                        learning_rate = eta * tt / self.tree_sizes[tree_idx]
                     )
             total_T += T
             p,g,r,l = self.get_density()
@@ -304,4 +354,7 @@ if __name__=='__main__':
     print(CC+'@R actions: @P {} @D '.format(WL.actions))
     print(CC+'@R parents: @P {} @D '.format(WL.parents))
     print(CC+'@R types: @P {} @D '.format(WL.types))
+    print(str_from_tree(tree))
     WL.compute_weights()
+    print({p:WL.w_codepth_parent[i] for p,i in WL.parents.as_dict().items()})
+    print({p:WL.w_codepth_grandp[i] for p,i in WL.parents.as_dict().items()})

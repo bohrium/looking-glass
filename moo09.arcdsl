@@ -1,0 +1,7 @@
+(split<int><gridpair> (many noise) \x1:int ->
+(split<shape><gridpair> (gen_shape noise x1) \x2:shape ->
+(split<grid><gridpair> (monochrome x2 red) \x3:grid ->
+(split<shape><gridpair> x2 \x4:shape ->
+(pair<gridpair>
+   x3
+   (monochrome x4 (rainbow noise)))))))

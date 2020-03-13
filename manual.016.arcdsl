@@ -10,9 +10,10 @@ split<{shape}><gridpair> (
 pair<gridpair>
     (
         fold<shape><grid> shapes (new_grid height width) \s:shape -> \x:grid -> ( 
-        split<ptdgrid><grid> (reserve_shape noise x s (center s)) \pg:ptdgrid -> (
-        paint_sprite (fst<ptdgrid> pg) (monochrome s cyan) (snd<ptdgrid> pg) (center s)
-        ))
+            paint_sprite
+                (reserve_shape noise x s (center s))
+                (monochrome s cyan) (center s)
+        )
     )(
         split<grid><grid> (new_grid nb_shapes nb_shapes) \yblank:grid -> (
         split<cell><grid> (corner yblank northwest) \crnr:cell -> (

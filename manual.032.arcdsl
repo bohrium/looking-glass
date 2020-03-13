@@ -8,10 +8,10 @@ split<grid><gridpair> (monochrome (gen_shape noise small) c) \spriteb:shape -> (
 assert<gridpair> (negate (eq<shape> (silouhette spritea) (silouhette spriteb))) (
 
 
-split<grid><gridpair> (paint_sprite blank spritea (corner blank northwest) (corner spritea northwest)) \x:grid -> (
-split<grid><gridpair> (paint_sprite     x spritea (corner     x southwest) (corner spritea southwest)) \x:grid -> (
-split<grid><gridpair> (paint_sprite     x spritea (corner     x northeast) (corner spritea northeast)) \x:grid -> (
-split<grid><gridpair> (paint_sprite     x spriteb (corner     x southeast) (corner spriteb southeast)) \x:grid -> (
+split<grid><gridpair> (paint_sprite (pair<ptdgrid> blank (corner blank northwest)) spritea (corner spritea northwest)) \x:grid -> (
+split<grid><gridpair> (paint_sprite (pair<ptdgrid>     x (corner     x southwest)) spritea (corner spritea southwest)) \x:grid -> (
+split<grid><gridpair> (paint_sprite (pair<ptdgrid>     x (corner     x northeast)) spritea (corner spritea northeast)) \x:grid -> (
+split<grid><gridpair> (paint_sprite (pair<ptdgrid>     x (corner     x southeast)) spriteb (corner spriteb southeast)) \x:grid -> (
 
 split<int><gridpair> (svrl noise) \nb_rots:int -> (
 pair<gridpair> (rotate_grid x nb_rots) (rotate_grid spriteb nb_rots)

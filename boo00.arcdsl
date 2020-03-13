@@ -1,0 +1,23 @@
+(split<int><gridpair> (many noise) \x1:int ->
+(split<int><gridpair> four \x2:int ->
+(split<color><gridpair> (rainbow noise) \x3:color ->
+(split<grid><gridpair> (fold<int><grid> (range two) (new_grid
+      (affine zero x1 two)
+      (height<shape> small_plus)) \x7:int ->
+   \x8:grid -> 
+   (paint_sprite
+      (pair<ptdgrid>
+         x8
+         (displace
+            (pair<cell> x7 x1)
+            east))
+      (monochrome large_times x3)
+      (pair<cell>
+         (affine
+            zero
+            x2
+            (width<shape> large_square))
+         x1))) \x4:grid ->
+(split<grid><gridpair> x4 \x5:grid ->
+(split<int><gridpair> x2\x6:int -> (pair<gridpair> x4 x4)
+)))))

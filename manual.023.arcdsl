@@ -17,14 +17,14 @@ split<{shape}><gridpair> (
         split<ptdgrid><gridpair> (reserve_shape noise (snd<gridpair> gp) s (center s)) \pg:ptdgrid -> (
         pair<gridpair>
             (paint_sprite
-                (fst<gridpair> gp)
+                (pair<ptdgrid> (fst<gridpair> gp) (snd<ptdgrid> pg))
                 (monochrome s blue)
-                (snd<ptdgrid> pg) (center s) 
+                (center s) 
             )
             (paint_sprite
-                (fst<ptdgrid> pg)
+                pg
                 (monochrome s (cond<color> (less_than zero (len<{cell}> (holes_of s))) cyan blue))
-                (snd<ptdgrid> pg) (center s) 
+                (center s) 
             )
         ))
     )

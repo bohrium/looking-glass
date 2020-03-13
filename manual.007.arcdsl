@@ -6,29 +6,17 @@ split<shape><gridpair> (gen_shape noise four) \shape_big:shape -> (
 split<shape><gridpair> (gen_shape noise four) \shape_small:shape -> (
 split<grid><gridpair> 
     (
-        split<ptdgrid><grid>
-        (reserve_shape noise blank shape_small (center shape_small))
-        \pg:ptdgrid -> (
-            paint_sprite
-            (fst<ptdgrid> pg)
-            (monochrome shape_small red)
-            (snd<ptdgrid> pg)
-            (center shape_small)
-        )
+        paint_sprite
+            (reserve_shape noise blank shape_small (center shape_small))
+            (monochrome shape_small red) (center shape_small)
     )
     \reddened:grid -> (
-        split<grid><gridpair>
-        (
+        split<grid><gridpair> (
             repeat<grid> nb_big_objs reddened \z:grid -> (
-                split<ptdgrid><grid>
-                (reserve_shape noise z shape_big (center shape_big))
-                \ptdgrid:ptdgrid -> (
-                    paint_sprite
-                    (fst<ptdgrid> ptdgrid)
+                paint_sprite
+                    (reserve_shape noise z shape_big (center shape_big))
                     (monochrome shape_big blue)
-                    (snd<ptdgrid> ptdgrid)
                     (center shape_big)
-                )
             )
         )
         \y:grid -> (pair<gridpair> (monochrome (silouhette y) cyan) y)

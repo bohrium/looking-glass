@@ -1,0 +1,10 @@
+(split<int><gridpair> (height<shape>
+   (gen_shape noise (afew noise))) \x1:int ->
+(split<int><gridpair> x1 \x2:int ->
+(split<grid><gridpair> (new_grid x1 x2) \x3:grid ->
+(split<color><gridpair> (rainbow noise) \x4:color ->
+(split<color><gridpair> x4 \x5:color ->
+(split<grid><gridpair> (monochrome (gen_shape noise x1) x5) \x6:grid ->
+(split<grid><gridpair> x6 \x7:grid ->
+(repeat<gridpair> x2 (pair<gridpair> x6 x6) \x8:gridpair ->
+   (pair<gridpair> x7 x6)))))))))

@@ -6,9 +6,8 @@ split<color><gridpair> (rainbow noise) \c:color -> (
 pair<gridpair>
 (
     paint_sprite
-        blank
+        (pair<ptdgrid> blank (snd<ptdgrid> (reserve_shape noise blank s (center s))))
         (monochrome s c) 
-        (snd<ptdgrid> (reserve_shape noise blank s (center s)))
         (center s)
 )
 (
@@ -16,9 +15,8 @@ pair<gridpair>
     (new_grid (height<shape> s) (affine two (width<shape> s) zero))
     \i:int -> \g:grid -> ( 
     paint_sprite
-        g
+        (pair<ptdgrid> g (pair<cell> zero (affine (width<shape> s) i zero)))
         (monochrome s c) 
-        (pair<cell> zero (affine (width<shape> s) i zero))
         (corner s northwest)
     )
 ))))))

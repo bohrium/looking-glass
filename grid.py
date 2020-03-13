@@ -17,6 +17,7 @@ from block import GENERIC_COLORS, Block
 
 class Grid:
     def __init__(self, H, W):
+        internal_assert(H<=24 and W<=24, 'requested grid is too big')
 
         self.colors = np.array([['K' for _ in range(W)] for _ in range(H)])
         self.occupd = np.array([[0   for _ in range(W)] for _ in range(H)])
@@ -49,7 +50,8 @@ class Grid:
         return G
 
     def rotate(self, rotations):
-        internal_assert(self.H*self.W, 'cannot rotate vacuous grid')
+        if not (self.H*self.W):
+            return
         self.colors = np.rot90(self.colors, rotations)
         self.occupd = np.rot90(self.occupd, rotations)
         if rotations%2:
@@ -138,7 +140,7 @@ class Grid:
                 self.colors[r+rr-rrr, c+cc-ccc] = color
 
     def reserve_shape(self, shape, shape_cell, nb_tries=5, spacious=False):
-        h, w = shape.shape
+        h, w = shape.shape[0], (shape.shape[1] if len(shape.shape)==2 else 0)
         rrr,ccc = shape_cell
         internal_assert(h<=self.H and w<=self.W, 'shape too big to reserve')
         for _ in range(nb_tries):
@@ -187,7 +189,7 @@ class Grid:
         return (0<=r<self.H and 0<=c<self.W)
 
     def shape_in_bounds(self, arr, r, c):
-        h, w = arr.shape
+        h, w = arr.shape[0], (arr.shape[1] if len(arr.shape)==2 else 0)
         for dr in range(h):
             for dc in range(w):
                 if not arr[dr,dc]: continue

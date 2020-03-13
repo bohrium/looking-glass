@@ -57,6 +57,7 @@ class InjectivityAnalyzer:
     def __init__(self, verbose=False):
         self.verbose = verbose
         self.reset_noise_count()
+        self.P = PrimitivesWrapper()
 
     def reset_noise_count(self):
         self.nb_noise_vars = 0 
@@ -68,9 +69,8 @@ class InjectivityAnalyzer:
         #    'pair': tBase.pair(tBase).frm(tBase).frm(tBase),
         #    'mix': tBase.frm(tBase).frm(tBase),
         #}
-        P = PrimitivesWrapper()
         sigs_by_nm = {
-            nm:coarsen_type(t) for nm,(impl, t) in P.primitives.items()
+            nm:coarsen_type(t) for nm,(impl, t) in self.P.primitives.items()
         } 
         self.DA = DepAnalyzer(sensitives, sigs_by_nm, verbose=self.verbose)
 
@@ -124,12 +124,29 @@ class InjectivityAnalyzer:
         )
 
 if __name__=='__main__':
-    code = '((\\n:noise -> (pair (mix n noise) (mix n noise))) noise)'
+    #code = '((\\n:noise -> (pair (mix n noise) (mix n noise))) noise)'
+#(split<int><gridpair> (afew noise) \\x1:int ->
+#(split<grid><gridpair> (new_grid x1 x1) \\x2:grid ->
+    code = '''
+(fold<int><gridpair> (rows (new_grid one one)) (pair<gridpair> (new_grid one one) (new_grid one one)) \\x3:int ->
+   \\x4:gridpair ->
+   (pair<gridpair>
+      (paint_row
+         (new_grid one one)
+         (fst x4)
+         gray)
+      (paint_row
+         (monochrome
+            large_square
+            brown)
+         one
+         (rainbow noise))))
+    '''
     tree = Parser(code).get_tree()
-    C = InjectivityAnalyzer()
+    C = InjectivityAnalyzer(verbose=True)
     labeled_tree, x_deps, y_deps = C.dependencies_of_pair(tree)
     print(CC+'analyzing @P {} @D '.format(labeled_tree))
     print(CC+'x depends on: @O {} @D '.format(x_deps))
     print(CC+'y depends on: @O {} @D '.format(y_deps))
-    pre(x_deps=={'noise0', 'noise2'}, 'failed test')
-    pre(y_deps=={'noise1', 'noise2'}, 'failed test')
+    #pre(x_deps=={'noise0', 'noise2'}, 'failed test')
+    #pre(y_deps=={'noise1', 'noise2'}, 'failed test')
