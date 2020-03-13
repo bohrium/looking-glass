@@ -32,7 +32,7 @@ class MetropolisHastingsSampler:
     def __init__(self):
         self.primitives = PrimitivesWrapper().primitives
         self.reset_varcount()
-        self.depth_bound = 10
+        self.depth_bound = 20
 
         self.weights = WeightLearner()
         self.train_grammar()
@@ -43,11 +43,11 @@ class MetropolisHastingsSampler:
                 self.weights.observe_tree(Parser(f.read()).get_tree())
         self.weights.compute_weights()
 
-    def sample(self, nb_steps):
-        t = self.init_propose() 
+    def sample(self, nb_steps, init_t=None):
+        t = self.init_propose() if init_t==None else init_t
         l = self.log_likelihood(t) 
+        #for _ in tqdm.tqdm(range(nb_steps)):
         for _ in range(nb_steps):
-            print('.')
             t, l = self.mh_step(t, l) 
         return t, l
 
@@ -133,11 +133,11 @@ class MetropolisHastingsSampler:
         self,
         atom,
         goal,
-        parent='root',
-        grandp='root',
-        imprimitives={},
-        lastres=None,
-        depth=0,
+        parent,
+        grandp,
+        imprimitives,
+        lastres,
+        depth,
     ):
         '''
             self.primitives should be a dictionary of types by name
@@ -191,10 +191,12 @@ class MetropolisHastingsSampler:
     #=========================================================================#
     
     def init_propose(self):
-        code = '(pair<gridpair> (new_grid two two) (new_grid two two))' 
+        code = '''
+            (pair<gridpair> (new_grid two two) (new_grid two two))
+        ''' 
         return Parser(code).get_tree()
     
-    def propose_from(self, tree, goal, resources={}, targ_idx=None):
+    def propose_from(self, tree, goal, parent='root', grandp='root', resources={}, lastres=None, depth=0, targ_idx=None):
         # sample resampling node uniformly
         if targ_idx is None:
             targ_idx = uniform(nb_nodes(tree)) 
@@ -202,9 +204,10 @@ class MetropolisHastingsSampler:
         if targ_idx == 0:
             while True:
                 try:
-                    subtree = self.resample(goal, imprimitives=resources)
+                    subtree = self.resample(goal, parent, grandp, imprimitives=resources, lastres=lastres, depth=depth)
                     break
                 except InternalError:
+                    print('.', end='')
                     continue
             return subtree
 
@@ -222,31 +225,32 @@ class MetropolisHastingsSampler:
             return (
                 [head] +
                 args[:arg_idx] + 
-                [self.propose_from(args[arg_idx], arg_type, resources, targ_idx)] +
+                [self.propose_from(args[arg_idx], arg_type, grandp, (head, arg_idx), resources, lastres, depth+1, targ_idx)] +
                 args[arg_idx+1:] 
             )
         elif type(tree) == dict:
             for (var_nm, var_type), body in tree.items():
                 resources = {k:v for k,v in resources.items()}
                 resources[var_nm] = goal.arg
-                return {(var_nm, var_type): self.propose_from(body, goal.out, resources, targ_idx-1)}
+                return {(var_nm, var_type): self.propose_from(body, goal.out, grandp, 'root', resources, lastres, depth+1, targ_idx-1)}
         else:
             pre(False, '')
 
     def resample(
         self,
         goal,
-        parent='root',
-        grandp='root',
-        imprimitives={},
-        lastres=None,
-        depth=0,
+        parent,
+        grandp,
+        imprimitives,
+        lastres,
+        depth,
     ):
         '''
             self.primitives should be a dictionary of types by name
             imprimitives    should be a dictionary of types by name
         '''
-        internal_assert(depth < self.depth_bound, 'uh oh!')
+        #print(depth)
+        #internal_assert(depth < self.depth_bound, 'uh oh!')
 
         matches = [
             MetropolisHastingsSampler.Match(nm, nm, hypoths)
@@ -329,19 +333,32 @@ class MetropolisHastingsSampler:
         self.reset_varcount()
         new_tree = self.propose_from(old_tree, tGridPair) 
         new_ll = self.log_likelihood(new_tree)
-        d_ll = new_ll - old_ll 
-        # TODO: mh correction!
-        if np.log(uniform(1.0)) < d_ll: 
+        print(CC+'ll @G {:4.2f}@D :'.format(new_ll))
+        print(CC+'@P {}@D '.format(str_from_tree(new_tree)))
+
+        mh_correction = - np.log(nb_nodes(new_tree)) + np.log(nb_nodes(old_tree)) 
+
+        d_ll = mh_correction #+ new_ll - old_ll  
+        u = uniform(1.0)
+        if u < np.exp(d_ll): 
+            print(CC+'@G accept! {:.2f} {:.2f} {:.2f} @D '.format(u, np.exp(d_ll), d_ll))
             return (new_tree, new_ll)
         else:
+            print(CC+'@R reject! {:.2f} {:.2f} {:.2f} @D '.format(u, np.exp(d_ll), d_ll))
             return (old_tree, old_ll)
 
 
 if __name__=='__main__':
     MHS = MetropolisHastingsSampler()
-    for _ in range(10):
-        t, l = MHS.sample(10)
-        print()
-        print(CC+'ll @G {:4.2f}@D :'.format(l))
-        print(CC+'@P {}@D '.format(str_from_tree(t)))
-        print()
+    t, l = MHS.sample(1)
+    for _ in range(1000):
+        t, l = MHS.sample(10, t)
+        try:
+            x, y = evaluate_tree(t, MHS.primitives)
+            print(CC+str_from_grids([
+                z.colors for z in [x,y]
+            ], render_color))
+        except:
+            print('uh oh!')
+            continue
+

@@ -3,6 +3,9 @@ THIS WEEK TODO
 ```all on branch TREE```
 
 TODO:
+    solve unbounded depth problem 
+
+TODO:
     typed roots!!
     and also goal??
 

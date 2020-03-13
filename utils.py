@@ -191,4 +191,10 @@ if __name__=='__main__':
     print(CC + '@N moo')
     print(CC + '@R moo')
 
-    print(CC + 'hi @M moo' + 'cow @C \n')
+    print(CC + 'hi @P moo' + 'cow @C \n')
+
+    print()
+    print(CC + 'unif @G {}@D '.format(uniform(1.0)))
+    print(CC + 'unif @G {}@D '.format(uniform(1.0)))
+    print(CC + 'unif @G {}@D '.format(uniform(1.0)))
+    print(CC + 'unif @G {}@D '.format(uniform(1.0)))
