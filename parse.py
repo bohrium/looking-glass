@@ -30,11 +30,20 @@ from utils import CC, pre   # ansi
 
 from lg_types import TS
 
+def nb_nodes(tree):
+    if type(tree) == str:
+        return 1
+    elif type(tree) == list:
+        return sum(nb_nodes(elt) for elt in tree)
+    elif type(tree) == dict: 
+        for (nm, t), body in tree.items():
+            return 1+nb_nodes(body)
+
 def get_depth(tree):
     if type(tree) == str:
         return 0
     elif type(tree) == list:
-        return 1+max(get_depth(elt) for elt in tree)
+        return 1+max(get_depth(elt) for elt in tree[1:])
     elif type(tree) == dict: 
         for (nm, t), body in tree.items():
             return 1+get_depth(body)

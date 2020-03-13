@@ -12,7 +12,7 @@ import tqdm
 import numpy as np
 import glob
 
-from utils import InternalError                         # maybe
+from utils import InternalError, internal_assert        # maybe
 from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
 from utils import reseed, bernoulli, geometric, uniform # math
@@ -32,6 +32,7 @@ class MetropolisHastingsSampler:
     def __init__(self):
         self.primitives = PrimitivesWrapper().primitives
         self.reset_varcount()
+        self.depth_bound = 10
 
         self.weights = WeightLearner()
         self.train_grammar()
@@ -46,6 +47,7 @@ class MetropolisHastingsSampler:
         t = self.init_propose() 
         l = self.log_likelihood(t) 
         for _ in range(nb_steps):
+            print('.')
             t, l = self.mh_step(t, l) 
         return t, l
 
@@ -98,6 +100,8 @@ class MetropolisHastingsSampler:
             return ll
         elif type(tree) == dict:
             for (var_nm, var_type), body in tree.items():
+                if var_nm.startswith('x'):
+                    self.var_count = max(self.var_count, int(var_nm[1:])+1)
                 resources = {k:v for k,v in imprimitives.items()}
                 resources[var_nm] = var_type
                 pre(var_type==goal.arg,
@@ -112,6 +116,7 @@ class MetropolisHastingsSampler:
                     lastres         =   var_type    ,
                     depth           =   depth+1     ,
                 )
+                return ll
         else:
             pre(False, 'unexpected tree type {}'.format(type(tree)))
 
@@ -163,18 +168,21 @@ class MetropolisHastingsSampler:
             depth           =   depth                       ,
             codepth = None,
         )
+        logits_by_name = {
+            m.token:(logits_by_name[m.token] if m.token in logits_by_name else -10.0)
+            for m in matches
+        }
 
         mm = max(
             logits_by_name[m.token]
             for m in matches
-            if m.token in logits_by_name
         )
         log_partition = np.log(sum(
             np.exp(logits_by_name[m.token]-mm)
             if m.token in logits_by_name else 0.0
             for m in matches
         ))
-        if atom in imprimitives or atom in self.primitives:
+        if atom in imprimitives:
             atom = 'resource'
         return (logits_by_name[atom]-mm) - log_partition
             
@@ -192,7 +200,13 @@ class MetropolisHastingsSampler:
             targ_idx = uniform(nb_nodes(tree)) 
 
         if targ_idx == 0:
-            return self.resample(goal, imprimitives=resources)
+            while True:
+                try:
+                    subtree = self.resample(goal, imprimitives=resources)
+                    break
+                except InternalError:
+                    continue
+            return subtree
 
         if type(tree) == list:
             targ_idx -= 1 
@@ -212,10 +226,10 @@ class MetropolisHastingsSampler:
                 args[arg_idx+1:] 
             )
         elif type(tree) == dict:
-            for (var_nm, _), body in tree.items():
-                resources = {k:v for k,v in imprimitives.items()}
+            for (var_nm, var_type), body in tree.items():
+                resources = {k:v for k,v in resources.items()}
                 resources[var_nm] = goal.arg
-                return {key: self.propose_from(body, goal.out, var_nm, targ_idx-1)}
+                return {(var_nm, var_type): self.propose_from(body, goal.out, resources, targ_idx-1)}
         else:
             pre(False, '')
 
@@ -232,6 +246,8 @@ class MetropolisHastingsSampler:
             self.primitives should be a dictionary of types by name
             imprimitives    should be a dictionary of types by name
         '''
+        internal_assert(depth < self.depth_bound, 'uh oh!')
+
         matches = [
             MetropolisHastingsSampler.Match(nm, nm, hypoths)
             for nm, (impl, sig) in self.primitives.items()
@@ -257,11 +273,14 @@ class MetropolisHastingsSampler:
             depth           =   depth                       ,
             codepth         =   None
         )
+        logits_by_name = {
+            m.token:(logits_by_name[m.token] if m.token in logits_by_name else -10.0)
+            for m in matches
+        }
 
         mm = max(
             logits_by_name[m.token]
             for m in matches
-            if m.token in logits_by_name
         )
         probs = np.array([
             np.exp(logits_by_name[m.token]-mm)
@@ -307,6 +326,7 @@ class MetropolisHastingsSampler:
     #=========================================================================#
     
     def mh_step(self, old_tree, old_ll):
+        self.reset_varcount()
         new_tree = self.propose_from(old_tree, tGridPair) 
         new_ll = self.log_likelihood(new_tree)
         d_ll = new_ll - old_ll 
@@ -319,8 +339,9 @@ class MetropolisHastingsSampler:
 
 if __name__=='__main__':
     MHS = MetropolisHastingsSampler()
-    t, l = MHS.sample(1)
-    print()
-    print(CC+'ll @G {:4.2f}@D :'.format(l))
-    print(CC+'@P {}@D '.format(str_from_tree(t)))
-    print()
+    for _ in range(10):
+        t, l = MHS.sample(10)
+        print()
+        print(CC+'ll @G {:4.2f}@D :'.format(l))
+        print(CC+'@P {}@D '.format(str_from_tree(t)))
+        print()

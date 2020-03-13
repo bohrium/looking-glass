@@ -286,9 +286,8 @@ class WeightLearner:
         return loss
 
     def compute_weights(self,
-        #schedule=[(10,0.5),(20,0.1),(40,0.02),(80,0.004)]
-        schedule=[(10,0.5),(10,0.1),(10,0.02),(10,0.004)]
-        #schedule=[(10,0.1),(10,0.02),(10,0.004)]
+        #schedule=[(10,0.5),(10,0.1),(10,0.02),(10,0.004)]
+        schedule=[(2,0.5)]
     ):
         '''
             Fit a model
@@ -305,6 +304,7 @@ class WeightLearner:
         for T, eta in schedule:
             sum_loss = 0.0 
             for _ in range(T):
+                print('hi')
                 train = list(self.train_set)
                 np.random.shuffle(train) 
                 for action, parent, grandp, vailresources, lastres, depth, codepth, tree_idx in train:

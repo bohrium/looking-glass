@@ -136,7 +136,7 @@ def uniform(n):
     if type(n) in [int, np.int64]:
         return np.random.randint(n)
     elif type(n)==float:
-        pass
+        return n * np.random.random() 
     else:
         return random.choice(n)
 
