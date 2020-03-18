@@ -11,6 +11,7 @@ from collections import namedtuple
 import tqdm
 import numpy as np
 
+from utils import paths                                 # path
 from utils import InternalError                         # maybe
 from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
@@ -45,7 +46,6 @@ class GrammarSampler:
 
     def learn_from(self, trees):
         for t in trees:
-            #print('***', end=' ')
             self.weights.observe_tree(t)
         self.weights.compute_weights()
 
@@ -227,18 +227,7 @@ if __name__=='__main__':
     print(CC+'@P learning from examples...@D ')
     GS = GrammarSampler(verbose=False)
 
-    CODE_FILE_NMS = [
-        'manual.003.arcdsl',
-        'manual.006.arcdsl',
-        'manual.007.arcdsl',
-        'manual.008.arcdsl',
-        'manual.016.arcdsl',
-        'manual.022.arcdsl',
-        'manual.023.arcdsl',
-        'manual.032.arcdsl',
-        'manual.034.arcdsl',
-        'manual.037.arcdsl',
-    ]
+    CODE_FILE_NMS = paths('manual')
     trees = []
     for file_nm in CODE_FILE_NMS:
         with open(file_nm) as f:

@@ -1,14 +1,14 @@
 ''' author: samtenka
-    change: 2020-03-01
+    change: 2020-03-17
     create: 2019-06-12
     descrp: Helpers for ANSI screen coloration, resource profiling, math,
             maybe types, and project paths.
     to use: Import:
-                from utils import CC, pre                           # ansi
+                from utils import CC, pre, status                   # ansi
                 from utils import secs_endured, megs_alloced        # profiling
                 from utils import reseed, geometric, bernoulli      # math
                 from utils import InternalError, internal_assert    # maybe
-                from utils import ARC_path                          # paths 
+                from utils import path                              # paths 
             Or, run as is to see a pretty rainbow:
                 python utils.py
 '''
@@ -18,13 +18,14 @@ import time
 import sys
 import random
 import numpy as np
+import glob
 
 #=============================================================================#
 #=====  0. ANSI CONTROL FOR RICH OUTPUT TEXT =================================#
 #=============================================================================#
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~  0.0 Define Text Modifier  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~  0.0. Define Text Modifier  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 class Colorizer(object):
     '''
@@ -34,7 +35,7 @@ class Colorizer(object):
     '''
     def __init__(self):
 
-        #-------------  0.0.0 ANSI command abbreviations  --------------------#
+        #-------------  0.0.0. ANSI command abbreviations  -------------------#
 
         self.ANSI_by_name = {
             '@^ ': '\033[1A',                 # motion: up
@@ -56,12 +57,13 @@ class Colorizer(object):
             '@N ': '\033[38;2;128;032;000m',  # color: brown
         }
 
-        #-------------  0.0.1 default color is cyan  -------------------------#
+        #-------------  0.0.1. default color is cyan  ------------------------#
+
         self.ANSI_by_name['@D '] = self.ANSI_by_name['@C ']
 
         self.text = ''
 
-    #-----------------  0.0.2 define application to strings  -----------------#
+    #-----------------  0.0.2. define application to strings  ----------------#
 
     def __add__(self, rhs):
         ''' Transition method of type Colorizer -> String -> Colorizer '''
@@ -78,33 +80,51 @@ class Colorizer(object):
         return rtrn
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~  0.1 Global Initializations  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~  0.1. Global Initializations  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 CC = Colorizer()
 print(CC+'@D @^ ')
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~  0.2 Styles for Special Message Types  ~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~  0.2. Styles for Special Message Types  ~~~~~~~~~~~~~~~~~~~~~~~#
 
 def pre(condition, message): 
     ''' assert precondition; if fail, complain in red '''
     assert condition, CC+'@R '+message+'@D '
+
+def status(message, **kwargs): 
+    ''' print in orange, with bracketed info in purple '''
+    if 'mood' not in kwargs:
+        kwargs['mood'] = 'desert' 
+    pre(kwargs['mood'] in {'desert', 'forest', 'sea'}, 'unknown mood!')
+    back, fore = {
+        'desert': ('@O', '@P'),
+        'forest': ('@G', '@N'),
+        'sea'   : ('@C', '@B'),
+    }[kwargs['mood']]
+    message = (
+        message
+        .replace('[', '[{} '.format(fore))
+        .replace(']', '{} ]'.format(back))
+    )
+    del kwargs['mood']
+    print(CC+'{} {}@D '.format(back, message), **kwargs)
 
 #=============================================================================#
 #=====  1. RESOURCE PROFILING  ===============================================#
 #=============================================================================#
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~  1.0 Memory Profiling  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~  1.0. Memory Profiling  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
-#---------------------  1.0.0 check memory profiler  -------------------------#
+#---------------------  1.0.0. check memory profiler  ------------------------#
 
 try:
     import memory_profiler
 except ImportError:
-    print(CC + '@O failed attempt to import `memory_profiler` @D ')
+    status('failed attempt to import [memory_profiler]')
 
-#---------------------  1.0.1 set memory profiler  ---------------------------#
+#---------------------  1.0.1. set memory profiler  --------------------------#
 
 megs_alloced = None if 'memory_profile' not in sys.modules else lambda: (
     memory_profiler.memory_usage(
@@ -113,7 +133,7 @@ megs_alloced = None if 'memory_profile' not in sys.modules else lambda: (
 )
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~  1.1 Time Profiling  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~  1.1. Time Profiling  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 start_time = time.time()
 secs_endured = lambda: (time.time()-start_time) 
@@ -123,7 +143,7 @@ secs_endured = lambda: (time.time()-start_time)
 #=============================================================================#
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~  2.0 Random Seed and Generators  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~  2.0. Random Seed and Generators  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 def reseed(s):
     random.seed(s)
@@ -149,8 +169,6 @@ def geometric(scale):
 #=====  3. SIMULATE MAYBE TYPES VIA EXCEPTIONS  ==============================#
 #=============================================================================#
 
-ARC_path = '../projects/ARC' 
-
 class InternalError(Exception):
     def __init__(self, msg):
         self.msg = msg
@@ -163,7 +181,12 @@ def internal_assert(condition, message):
 #=====  4. USEFUL PATHS  =====================================================#
 #=============================================================================#
 
-ARC_path = '../projects/ARC' 
+with open('paths.json') as f:
+    paths_by_descrp = eval(f.read())
+
+def paths(descrp):
+    pattern = paths_by_descrp[descrp]
+    return sorted(glob.glob(pattern)) if '*' in pattern else pattern
 
 #=============================================================================#
 #=====  5. ILLUSTRATE UTILITIES  =============================================#
@@ -172,7 +195,7 @@ ARC_path = '../projects/ARC'
 if __name__=='__main__':
 
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-    #~~~~~~~~~  5.0 Display a Rainbow  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+    #~~~~~~~~~  5.0. Display a Rainbow  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
     print(CC + '@D moo')
 
@@ -192,6 +215,9 @@ if __name__=='__main__':
     print(CC + '@R moo')
 
     print(CC + 'hi @P moo' + 'cow @C \n')
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+    #~~~~~~~~~  5.1. Sample from Uniform  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
     print()
     print(CC + 'unif @G {}@D '.format(uniform(1.0)))

@@ -33,30 +33,65 @@ class MetropolisHastingsSampler:
     def __init__(self):
         self.primitives = PrimitivesWrapper().primitives
         self.reset_varcount()
-        self.depth_bound = 20
+        self.depth_bound = 50
 
         self.weights = WeightLearner()
         self.train_grammar()
 
     def train_grammar(self):
-        for file_nm in glob.glob('manual*.*.arcdsl'):
+        for file_nm in glob.glob('manual-programs/manual*.*.arcdsl'):
             with open(file_nm) as f:
                 self.weights.observe_tree(Parser(f.read()).get_tree())
         self.weights.compute_weights()
 
     def sample(self, nb_steps, init_t=None):
         t = self.init_propose() if init_t==None else init_t
-        l = self.log_likelihood(t) 
+        lp = self.log_prior(t) 
+        ll = self.log_likelihood(t) 
         #for _ in tqdm.tqdm(range(nb_steps)):
         for _ in range(nb_steps):
-            t, l = self.mh_step(t, l) 
-        return t, l
+            t, lp, ll = self.mh_step(t, lp, ll) 
+        return t, lp, ll
 
     #=========================================================================#
-    #=  0. LIKELIHOOD  =======================================================#
+    #=  0. SCORING  ==========================================================#
     #=========================================================================#
+
+    def log_likelihood(self, tree):
+        ll = 0.0
+        x,y = None, None
+        try:
+            x, y = evaluate_tree(tree, self.primitives)
+        except:
+            ll -= 5.0
+        if type(y)==Grid:
+            colors = set(e for r in y.colors for e in r)
+            if colors in [{'K'}, set([])]:
+                ll -= 3.0
+            elif len(colors)==1:
+                ll -= 2.0
+        if type(x)==Grid:
+            colors = set(e for r in x.colors for e in r)
+            if colors in [{'K'}, set([])]:
+                ll -= 3.0
+            elif len(colors)==1:
+                ll -= 2.0
+
+        if type(x)==Grid and type(y)==Grid:
+            if x.H==y.H and x.W==y.W:
+                for h in range(x.H):
+                    for w in range(x.W):
+                        if x.colors[h][w]!=y.colors[h][w]:
+                            break
+                    else:
+                        continue
+                    break
+                else:
+                    ll -= 1.0
+
+        return ll
     
-    def log_likelihood(
+    def log_prior(
         self,
         tree,
         goal = tGridPair,  
@@ -67,7 +102,7 @@ class MetropolisHastingsSampler:
         depth=0
     ):
         if type(tree) == str:
-            ll = self.log_likelihood_of_node(
+            ll = self.log_prior_of_node(
                 tree,
                 goal = goal,
                 parent=parent,
@@ -78,7 +113,7 @@ class MetropolisHastingsSampler:
             )
             return ll
         elif type(tree) == list:
-            ll = self.log_likelihood_of_node(
+            ll = self.log_prior_of_node(
                 tree[0],
                 goal = goal,
                 parent=parent,
@@ -90,7 +125,7 @@ class MetropolisHastingsSampler:
             partial_type = self.primitives[tree[0]][1]
             for i, arg in enumerate(tree[1:]):
                 arg_type, partial_type = partial_type.arg, partial_type.out
-                ll += self.log_likelihood(arg,
+                ll += self.log_prior(arg,
                     goal            =   arg_type        ,
                     parent          =   (tree[0], i)    ,
                     grandp          =   parent          ,
@@ -109,7 +144,7 @@ class MetropolisHastingsSampler:
                     'expected arg of type {} but {} has type {}'.format(
                         goal.arg, var_nm, var_type 
                 )) 
-                ll = self.log_likelihood(body,
+                ll = self.log_prior(body,
                     goal            =   goal.out,
                     parent          =   'root'      ,
                     grandp          =   parent      ,
@@ -130,7 +165,7 @@ class MetropolisHastingsSampler:
 
     Match = namedtuple('Match', ['token', 'name', 'hypoths']) 
 
-    def log_likelihood_of_node(
+    def log_prior_of_node(
         self,
         atom,
         goal,
@@ -209,13 +244,15 @@ class MetropolisHastingsSampler:
             targ_idx = uniform(nb_nodes(tree)) 
 
         if targ_idx == 0:
+            print('start')
             while True:
                 try:
                     subtree = self.resample(goal, parent, grandp, imprimitives=resources, lastres=lastres, depth=depth)
                     break
-                except InternalError:
-                    print('.', end='')
+                except InternalError as e:
+                    print(e.msg, end='', flush=True)
                     continue
+            print('end')
             return subtree
 
         if type(tree) == list:
@@ -337,53 +374,37 @@ class MetropolisHastingsSampler:
     #=  2. METROPOLIS-HASTINGS STEP  =========================================#
     #=========================================================================#
     
-    def mh_step(self, old_tree, old_ll):
+    def mh_step(self, old_tree, old_lp, old_ll):
         self.reset_varcount()
         new_tree = self.propose_from(old_tree, tGridPair) 
+        new_lp = self.log_prior(new_tree)
         new_ll = self.log_likelihood(new_tree)
-        print(CC+'ll @G {:4.2f}@D :'.format(new_ll))
+        print(CC+'ll @G {:6.2f} @O {:6.2f}@D :'.format(new_lp, new_ll))
         print(CC+'@P {}@D '.format(str_from_tree(new_tree)))
 
-        mh_correction = - np.log(nb_nodes(new_tree)) + np.log(nb_nodes(old_tree)) 
-
-        d_ll = mh_correction #+ new_ll - old_ll  
-        x,y = None, None
-        try:
-            x, y = evaluate_tree(new_tree, self.primitives)
-        except:
-            d_ll -= 5.0
-        if type(y)==Grid:
-            colors = set(e for r in y.colors for e in r)
-            if colors in [{'K'}, set([])]:
-                d_ll -= 2.0
-            elif len(colors)==1:
-                d_ll -= 1.0
-
-        if type(x)==Grid:
-            colors = set(e for r in x.colors for e in r)
-            if colors in [{'K'}, set([])]:
-                d_ll -= 2.0
-            elif len(colors)==1:
-                d_ll -= 1.0
+        d_ls = (
+            - np.log(nb_nodes(new_tree)) + np.log(nb_nodes(old_tree)) # MH correction
+            + new_ll - old_ll
+        )
 
         u = uniform(1.0)
-        if u < np.exp(d_ll): 
-            print(CC+'@G accept! {:.2f} {:.2f} {:.2f} @D '.format(u, np.exp(d_ll), d_ll))
-            return (new_tree, new_ll)
+        if u < np.exp(d_ls): 
+            print(CC+'@G accept! {:.2f} {:.2f} {:.2f} @D '.format(u, np.exp(d_ls), d_ls))
+            return (new_tree, new_lp, new_ll)
         else:
-            print(CC+'@R reject! {:.2f} {:.2f} {:.2f} @D '.format(u, np.exp(d_ll), d_ll))
-            return (old_tree, old_ll)
+            print(CC+'@R reject! {:.2f} {:.2f} {:.2f} @D '.format(u, np.exp(d_ls), d_ls))
+            return (old_tree, old_lp, old_ll)
 
 
 if __name__=='__main__':
     MHS = MetropolisHastingsSampler()
-    t, l = MHS.sample(1)
+    t, lp, ll = MHS.sample(1)
     for i in range(10000):
-        print(CC, '@R {}@D '.format(i))
+        print(CC+'@R {}@D '.format(i))
         if i%100==0:
-            with open('mcmc.{:06d}.arcdsl', 'w') as f:
+            with open('mcmc3.depthbound20.{:04d}.arcdsl'.format(i), 'w') as f:
                 f.write(str_from_tree(t))
-        t, l = MHS.sample(1, t)
+        t, lp, ll = MHS.sample(1, t)
         try:
             x, y = evaluate_tree(t, MHS.primitives)
             print(CC+str_from_grids([
@@ -392,4 +413,3 @@ if __name__=='__main__':
         except:
             print('uh oh!')
             continue
-

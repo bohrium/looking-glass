@@ -39,14 +39,14 @@ def nb_nodes(tree):
         for (nm, t), body in tree.items():
             return 1+nb_nodes(body)
 
-def get_depth(tree):
+def get_height(tree):
     if type(tree) == str:
         return 0
     elif type(tree) == list:
-        return 1+max(get_depth(elt) for elt in tree[1:])
+        return 1+max(get_height(elt) for elt in tree[1:])
     elif type(tree) == dict: 
         for (nm, t), body in tree.items():
-            return 1+get_depth(body)
+            return 1+get_height(body)
 
 def str_from_tree_flat(tree):
     if type(tree) == str:
@@ -55,7 +55,7 @@ def str_from_tree_flat(tree):
         return '({})'.format(' '.join(map(str_from_tree_flat, tree)))
     elif type(tree) == dict: 
         for (nm, t), body in tree.items():
-            return '\\{}:{} -> {}'.format(nm, t, str_from_tree_flat(body)) 
+            return ' \\{}:{} -> {}'.format(nm, t, str_from_tree_flat(body)) 
 
 def str_from_tree(tree, depth=0, delim='   '):
     tab = delim*depth
@@ -84,7 +84,7 @@ def str_from_tree(tree, depth=0, delim='   '):
         return rtrn
     elif type(tree) == dict: 
         for (nm, t), body in tree.items():
-            rtrn = '{}\\{}:{} -> \n'.format(tab, nm, t) 
+            rtrn = '{} \\{}:{} -> \n'.format(tab, nm, t) 
             rtrn += str_from_tree(body, depth+0)
             return rtrn
 

@@ -21,7 +21,7 @@
 import inspect
 import numpy as np
 
-from utils import ARC_path, InternalError, internal_assert
+from utils import InternalError, internal_assert
 from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
 from utils import reseed, bernoulli, geometric, uniform # math

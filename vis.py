@@ -1,13 +1,12 @@
 ''' author: samtenka
-    change: 2020-02-23
+    change: 2020-03-17
     create: 2019-02-23
-    descrp: visualize jsons  
+    descrp: visualize grids
     to use: 
 '''
 
 import numpy as np
 
-from utils import ARC_path
 from utils import CC, pre                       # ansi
 from utils import secs_endured, megs_alloced    # profiling
 from utils import reseed, bernoulli, geometric  # math
@@ -42,8 +41,10 @@ def str_from_grids(grids, render=render_number):
     return '\n'.join(lines)
 
 if __name__=='__main__':
-    HARDNESS = 1
-    for i in range(50):
+    HARDNESS = 0
+    print(CC+'hi!  here are some @R actual ARC @D tasks!')
+    print(CC+'only showing hardness @P {} @D tasks...'.format(HARDNESS))
+    for i in range(100):
         if get_hardness(i)!=HARDNESS: continue
         print(CC + 'task @O {}@D '.format(i))
 

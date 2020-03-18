@@ -114,7 +114,8 @@ def demonstrate(file_nm, print_text=True, nb_rows=1, nb_cols=1, nb_tries=10, sho
 
 if __name__=='__main__':
     #file_nms = glob.glob('moo02.arcdsl')
-    file_nms = glob.glob('*37.arcdsl')
+    #file_nms = glob.glob('*37.arcdsl')
+    file_nms = glob.glob('markov-generated/*.arcdsl')
     for fnm in file_nms:
         demonstrate(fnm, print_text=False, show_exec=False, nb_rows=3, nb_cols=5)
         input(CC+'@O next?@D ')
