@@ -1,0 +1,24 @@
+(
+split<int><gridpair> (many noise) \side:int -> (
+split<int><gridpair> (afew noise) \nb_big_objs:int -> (
+split<grid><gridpair> (new_grid side side) \blank:grid -> (
+split<shape><gridpair> (gen_shape noise four) \shape_big:shape -> (
+split<shape><gridpair> (gen_shape noise four) \shape_small:shape -> (
+split<grid><gridpair> 
+    (
+        paint_sprite
+            (reserve_shape noise blank shape_small (center shape_small))
+            (monochrome shape_small red) (center shape_small)
+    )
+    \reddened:grid -> (
+        split<grid><gridpair> (
+            repeat<grid> nb_big_objs reddened \z:grid -> (
+                paint_sprite
+                    (reserve_shape noise z shape_big (center shape_big))
+                    (monochrome shape_big blue)
+                    (center shape_big)
+            )
+        )
+        \y:grid -> (pair<gridpair> (monochrome (silouhette y) cyan) y)
+    )
+))))))

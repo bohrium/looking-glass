@@ -1,0 +1,28 @@
+(
+split<int><gridpair> (svrl noise) \side:int -> (
+split<grid><gridpair> (new_grid side side) \blank:grid -> (
+fold<int><gridpair> (rows blank) (pair<gridpair> blank blank)
+    \row:int -> \xy:gridpair -> ( 
+    cond<gridpair> (coin noise) (
+        pair<gridpair> (
+            paint_row (fst<gridpair> xy) row (rainbow noise)
+        )(
+            paint_row (snd<gridpair> xy) row gray
+        )
+    )(
+        pair<gridpair> (
+            split<{nmbrdcolor}><grid> (
+            map<int><nmbrdcolor> (columns blank) \c:int -> (
+                pair<nmbrdcolor> c (rainbow noise)
+            )) \intcolors:{nmbrdcolor} -> (
+                fold<nmbrdcolor><grid> intcolors (fst<gridpair> xy)
+                \intcolor:nmbrdcolor -> \x:grid -> ( 
+                    paint_cell x (pair<cell> row (fst<nmbrdcolor> intcolor))
+                        (snd<nmbrdcolor> intcolor)
+                )
+            )
+        )(
+            snd<gridpair> xy
+        )
+    ))
+)))

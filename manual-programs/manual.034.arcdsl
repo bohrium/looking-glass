@@ -1,0 +1,22 @@
+(
+split<int><gridpair> (many noise) \side:int -> (
+split<grid><gridpair> (new_grid side side) \blank:grid -> (
+split<shape><gridpair> (gen_shape noise (svrl noise)) \s:shape -> (
+split<color><gridpair> (rainbow noise) \c:color -> (
+pair<gridpair>
+(
+    paint_sprite
+        (pair<ptdgrid> blank (snd<ptdgrid> (reserve_shape noise blank s (center s))))
+        (monochrome s c) 
+        (center s)
+)
+(
+    fold<int><grid> (range two)
+    (new_grid (height<shape> s) (affine two (width<shape> s) zero))
+    \i:int -> \g:grid -> ( 
+    paint_sprite
+        (pair<ptdgrid> g (pair<cell> zero (affine (width<shape> s) i zero)))
+        (monochrome s c) 
+        (corner s northwest)
+    )
+))))))

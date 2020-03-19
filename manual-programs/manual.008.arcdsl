@@ -1,0 +1,28 @@
+(
+split<int><gridpair> (many noise) \side:int -> (
+split<int><gridpair> (svrl noise) \nb_shapes:int -> (
+split<{nmbrdgrid}><gridpair> (
+    repeat<{nmbrdgrid}> nb_shapes nil<nmbrdgrid> \ngs:{nmbrdgrid} -> (
+        add<nmbrdgrid> ngs (
+            pair<nmbrdgrid>
+            (monochrome (gen_shape noise three) (rainbow noise))
+            (afew noise)
+        )
+    )
+) \msprites:{nmbrdgrid} -> (
+pair<gridpair>
+    (
+        fold<nmbrdgrid><grid> msprites (new_grid side side) \ms:nmbrdgrid -> \x:grid -> ( 
+        split<shape><grid> (silouhette (fst<nmbrdgrid> ms)) \s:shape -> (
+        repeat<grid> (snd<nmbrdgrid> ms) x \xx:grid -> (
+            paint_sprite
+                (reserve_shape noise xx s (center s))
+                (fst<nmbrdgrid> ms) (center s)
+        )))
+    )
+    (fst<nmbrdgrid> 
+        (unwrap_sing<nmbrdgrid>
+        (argmax<nmbrdgrid> msprites \ms:nmbrdgrid -> (snd<nmbrdgrid> ms))
+        )
+    )
+))))

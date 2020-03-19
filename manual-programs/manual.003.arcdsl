@@ -1,0 +1,29 @@
+(
+split<int><gridpair> (many noise) \side:int -> (
+split<int><gridpair> (svrl noise) \nb_objs:int -> (
+split<grid><gridpair> (new_grid side side) \blank:grid -> (
+split<color><gridpair> (rainbow noise) \color_a:color -> (
+split<color><gridpair> (rainbow noise) \color_b:color -> (
+repeat<gridpair> nb_objs (pair<gridpair> blank blank) \xy:gridpair -> (
+    split<ptdgrid><gridpair> (
+    reserve_shape noise (snd<gridpair> xy) large_square (center large_square)
+    ) \pg:ptdgrid -> (
+    pair<gridpair> (
+        split<grid><grid> (
+        paint_sprite
+            (pair<ptdgrid> (fst<gridpair> xy) (snd<gridpair> pg))
+            (monochrome small_plus color_a) (center small_plus)
+        ) \half_painted:grid -> (
+        paint_cell half_painted (snd<ptdgrid> pg) color_b
+        )
+    )(
+        split<grid><grid> (
+        paint_sprite pg (monochrome large_plus color_a) (center large_plus)
+        ) \half_painted:grid -> (
+        paint_sprite
+            (pair<ptdgrid> half_painted (snd<ptdgrid> pg))
+            (monochrome large_times color_b) (center large_times)
+        )
+    ))
+))))))
+)
