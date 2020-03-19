@@ -47,8 +47,7 @@ class TreeSampler:
         self.primitives = PrimitivesWrapper().primitives
         self.weights = WeightLearner()
         self.weights.observe_manual()
-        #self.weights.load_weights('fav.e10.r03')
-        self.weights.load_weights('fav.e10.r04')
+        self.weights.load_weights('fav.r04')
 
         self.reset_var_count()
 
@@ -84,17 +83,25 @@ class TreeSampler:
     def sample_tree(self, goal, ecntxt):
         '''
         '''
-        if ecntxt.height == 0:
-            #print(ecntxt.height, '?')
-            return '?'
-    
+        #if ecntxt.height == 0:
+        #    #print(ecntxt.height, '?')
+        #    return '?'
+
         matches_by_actions = self.get_matches(goal, ecntxt) 
         actions = matches_by_actions.keys()
     
         height = self.weights.sample_height(ecntxt)
         action = self.weights.sample_action(ecntxt, height, actions) 
         match = matches_by_actions.sample(action)
-        status('action [{}] [{}]'.format(height, action), mood='sea')
+
+        print(' '*ecntxt.deepth, end='')
+        status('[{}] [{}] [{}] [{}] -> [{}] ... subgoals: [{}]'.format(
+            ecntxt.deepth, height, goal,
+            ' ; '.join(map(str, set(ecntxt.hypths.values()))),
+            action,
+            ' ; '.join(map(str, match.subgoals))
+        ), end='')
+        input()
     
         if action == 'root':
             var_nm = self.get_fresh()
@@ -106,16 +113,17 @@ class TreeSampler:
             )
             return {(var_nm, goal.arg): body}
         else:
+            nbkids = len(match.subgoals)
             if match.subgoals:
                 favidx = self.weights.sample_favidx(
-                    action,
-                    nbkids=len(match.subgoals)
+                    action=action,
+                    nbkids=nbkids
                 )
             subtrees = [
                 self.sample_tree(
                     goal   = subgoal,
                     ecntxt = next_edge_cntxt(
-                        action, ecntxt, height, idx=i, favidx=favidx
+                        action, ecntxt, height, idx=nbkids-1-i, favidx=favidx
                     )
                 )
                 for i, subgoal in enumerate(match.subgoals)

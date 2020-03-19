@@ -56,6 +56,7 @@ def init_edge_cntxt(height):
         deepth = 0       ,
     )
 
+max_depth=20
 def next_edge_cntxt(
     action, ecntxt, height,
     var_nm=None, var_type=None, idx=None, favidx=None
@@ -69,7 +70,7 @@ def next_edge_cntxt(
             parent = ecntxt.action   ,
             hypths = augmented_hypths,
             favord = 1               , 
-            deepth = ecntxt.deepth+1 ,
+            deepth = min(max_depth, ecntxt.deepth+1) ,
         )
     else:
         return EdgeContext(
@@ -78,7 +79,7 @@ def next_edge_cntxt(
              parent = ecntxt.action          ,
              hypths = ecntxt.hypths          ,
              favord = 1 if idx==favidx else 0,
-             deepth = ecntxt.deepth+1        ,
+             deepth = min(max_depth, ecntxt.deepth+1) ,
         )
 
 def display_datapoint(dp):
@@ -103,7 +104,7 @@ class Index:
     '''
     '''
     def __init__(self, items=set()):
-        self.indices_by_elt = { v:i for i,v in enumerate(set(items)) }
+        self.indices_by_elt = { v:i for i,v in enumerate(sorted(items)) }
     def as_dict(self):
         return self.indices_by_elt
     def __str__(self):
@@ -117,7 +118,7 @@ class Index:
         return self.indices_by_elt[elt] if elt in self.indices_by_elt else None
 
 class WeightLearner: 
-    def __init__(self, regularizer=1e-4, height_unit=10.0):
+    def __init__(self, regularizer=1e-9, height_unit=10.0):
         self.train_set = []
 
         self.actions = Index({'root', 'resource'})
@@ -145,24 +146,28 @@ class WeightLearner:
             height = ecntxt.height,
             action = self.parents.idx(ecntxt.action),
             parent = self.parents.idx(ecntxt.parent),
-            hypths = {
+            hypths = set(
                 self.hypoths.idx(h) for h in ecntxt.hypths.values()
                 if h in self.hypoths.as_dict()
-            },
+            ),
             favord = ecntxt.favord,
             deepth = ecntxt.deepth,
         )
 
     def sample_height(self, ecntxt):
+        if ecntxt.height<=0:
+            return 0
         if ecntxt.favord:
             rtrn = ecntxt.height-1 
-            status('height [{:2}] [{:2}] ***'.format(ecntxt.height, rtrn))
+            #status('height [{:2}] [{:2}] ***'.format(ecntxt.height, rtrn))
         else:
             ecntxt_idx = self.ecntxt_idx(ecntxt)
             logit = self.height_logit(ecntxt_idx)[0]
             p = sigmoid(logit)
             rtrn = np.random.binomial(n=ecntxt.height-1, p=p)
-            status('height [{:2}] [{:2}] [{:.2}] [{:.2}]'.format(ecntxt.height, rtrn, logit, p))
+            #status('height pi[{}] h[{:2}] -> [{:.2f}] -> [{:.2f}] -> h\'[{:2}]'.format(
+            #    ecntxt.action[-1], ecntxt.height, logit, p, rtrn
+            #))
         return rtrn
 
     def sample_action(self, ecntxt, height, actions):
@@ -173,27 +178,31 @@ class WeightLearner:
             if idx is not None
         }
         if not actions_by_idx:
-            return uniform(actions) 
-        action_indices = np.array(sorted(actions_by_idx.keys()))
-        ecntxt_idx = self.ecntxt_idx(ecntxt)
-        logits = self.action_logit(ecntxt_idx, height)[action_indices]
-        logits -= np.amax(logits)
-        probs = normalize_arr(np.exp(logits))
-        idx = np.random.choice(action_indices, p=probs) 
-        return actions_by_idx[idx] 
+            action = uniform(list(actions))
+            #status('action [{}] ***'.format(height, action), mood='sea')
+        else:
+            action_indices = np.array(sorted(actions_by_idx.keys()))
+            ecntxt_idx = self.ecntxt_idx(ecntxt)
+            logits = self.action_logit(ecntxt_idx, height)[action_indices]
+            logits -= np.amax(logits)
+            probs = normalize_arr(np.exp(logits))
+            idx = np.random.choice(action_indices, p=probs) 
+            action = actions_by_idx[idx]
+            #status('action [{:2}] -> [{}]'.format(height, action), mood='sea')
+        return action
 
     def sample_favidx(self, action, nbkids):
         pre(nbkids <= self.branch_factor, 'unprecedented branch factor!') 
         action_idx = self.actions.idx(action) 
         logits = (
-            np.full(nb_kids, 1.0/nb_kids)
+            np.full(nbkids, 1.0/nbkids)
             if action_idx is None else
             self.favidx_logit(action_idx, nbkids)
         )
         logits -= np.amax(logits)
         probs = normalize_arr(np.exp(logits))
         idx = np.random.choice(nbkids, p=probs) 
-        status('favidx [{}] [{}] [{}]'.format(action, nbkids, idx), mood='forest')
+        #status('favidx [{}] [{}] -> [{}]'.format(action, nbkids, idx), mood='forest')
         return idx
 
     def observe_datapoint(self, ecntxt, height, head, nbkids, favidx, tindex):
@@ -309,7 +318,7 @@ class WeightLearner:
         self.w_action_grandp  = np.full((out_dim, par_dim), 0.0)
         self.w_action_hypths  = np.full((out_dim, typ_dim), 0.0)
         self.w_action_deepth  = np.full( out_dim          , 0.0)
-        self.w_action_height  = np.full( out_dim          , 0.0)
+        self.w_action_heightN = np.full( out_dim          , 0.0)
         self.w_action_height0 = np.full( out_dim          , 0.0)
         self.w_action_height1 = np.full( out_dim          , 0.0)
         self.w_action_height2 = np.full( out_dim          , 0.0)
@@ -350,10 +359,11 @@ class WeightLearner:
             +    (self.w_action_grandp[:,ecntxt_idx.parent] if ecntxt_idx.parent is not None else 0)
             + sum(self.w_action_hypths[:,       idx       ] for idx in ecntxt_idx.hypths)
             +     self.w_action_deepth * ecntxt_idx.deepth / self.height_unit
-            +     self.w_action_height * height            / self.height_unit
-            +    (self.w_action_height0 if height==0 else 0)
-            +    (self.w_action_height1 if height==1 else 0)
-            +    (self.w_action_height2 if height==2 else 0)
+            #+     self.w_action_height * height            / self.height_unit
+            +    (self.w_action_heightN if 3<=height else 0)
+            +    (self.w_action_height0 if height<=0 else 0)
+            +    (self.w_action_height1 if height<=1 else 0)
+            +    (self.w_action_height2 if height<=2 else 0)
         )
 
         return logits - np.amax(logits)
@@ -403,10 +413,11 @@ class WeightLearner:
         for idx in ecntxt_idx.hypths:
             self.w_action_hypths[:,idx]           -= update
         self.w_action_deepth                      -= update * ecntxt.deepth / self.height_unit
-        self.w_action_height                      -= update * height        / self.height_unit
-        self.w_action_height0                     -= update * (1 if height==0 else -1)
-        self.w_action_height1                     -= update * (1 if height==1 else -1)
-        self.w_action_height2                     -= update * (1 if height==2 else -1)
+        #self.w_action_height                      -= update * height        / self.height_unit
+        self.w_action_heightN                     -= update * (1 if 3<=height else -1)
+        self.w_action_height0                     -= update * (1 if height<=0 else -1)
+        self.w_action_height1                     -= update * (1 if height<=1 else -1)
+        self.w_action_height2                     -= update * (1 if height<=2 else -1)
 
         # l1 regularization:
         lr_reg = learning_rate * self.regularizer
@@ -465,18 +476,18 @@ if __name__=='__main__':
     #for i in range(5):
     #    display_datapoint(l[i])
 
-    WL.compute_weights()
-    WL.save_weights('fav.e10.r04')
-    #WL.load_weights('fav.e10.r03')
+    #WL.compute_weights()
+    #WL.save_weights('fav.r04')
+    WL.load_weights('fav.r04')
     print('done!')
 
     print(CC+'@P action-specific weights:@D ')
     print(CC+'@B {:6} @O {:7} @O {:7} @O {:7} @O {:7} @G {:6}'.format(
-        'deepth', 'height', 'height0', 'height1', 'height2', 'unigrm'
+        'deepth', 'heightN', 'height0', 'height1', 'height2', 'unigrm'
     ))
     named_weights = [(
         WL.w_action_deepth[i],
-        WL.w_action_height[i],
+        WL.w_action_heightN[i],
         WL.w_action_height0[i],
         WL.w_action_height1[i],
         WL.w_action_height2[i],
@@ -484,10 +495,14 @@ if __name__=='__main__':
         a
     ) for a, i in WL.actions.as_dict().items()]
     for i, (w_dp, w_ht, w_ht0, w_ht1, w_ht2, w_un, a) in enumerate(
-        sorted(named_weights, key=lambda a:a[2])
+        sorted(named_weights, key=lambda x:
+            2*x[0]+ x[2]+x[3]+x[4]+x[5]
+        )
     ):
-        print(CC+'@B {:+6.2f} @O {:+7.2f} @O {:+7.2f} @O {:+7.2f} @O {:+7.2f} @G {:+6.2f} @D {}'.format(
-            w_dp, w_ht, w_ht0, w_ht1, w_ht2, w_un, a
+        print(CC+'@B {:+6.2f} @O {:+7.2f} @O {:+7.2f} @O {:+7.2f} @O {:+7.2f} @G {:+6.2f} @D {:+6.2f} {}'.format(
+            w_dp, w_ht, w_ht0, w_ht1, w_ht2, w_un, 
+            2*w_dp + w_ht0+w_ht1+w_ht2+w_un,
+            a
         ))
         if (i+1)%10==0:
             input()

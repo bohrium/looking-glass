@@ -55,7 +55,7 @@ def str_from_tree_flat(tree):
         return '({})'.format(' '.join(map(str_from_tree_flat, tree)))
     elif type(tree) == dict: 
         for (nm, t), body in tree.items():
-            return ' \\{}:{} -> {}'.format(nm, t, str_from_tree_flat(body)) 
+            return '\\{}:{} -> {}'.format(nm, t, str_from_tree_flat(body)) 
 
 def str_from_tree(tree, depth=0, delim='   '):
     tab = delim*depth
