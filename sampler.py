@@ -46,13 +46,14 @@ class ListByKey:
         return uniform(self.data[key])
 
 class TreeSampler:
-    def __init__(self):
+    def __init__(self, timeout_prob=0.0):
         self.primitives = PrimitivesWrapper().primitives
         self.weights = WeightLearner()
         self.weights.observe_manual()
         self.weights.load_weights('fav.r04')
 
         self.reset_var_count()
+        self.timeout_prob = timeout_prob
 
     def reset_var_count(self):
         self.var_count = 0
@@ -86,9 +87,7 @@ class TreeSampler:
     def sample_tree(self, goal, ecntxt):
         '''
         '''
-        #if ecntxt.height == 0:
-        #    #print(ecntxt.height, '?')
-        #    return '?'
+        pre(not bernoulli(self.timeout_prob), 'timeout')
 
         matches_by_actions = self.get_matches(goal, ecntxt) 
         actions = matches_by_actions.keys()
@@ -97,15 +96,6 @@ class TreeSampler:
         action = self.weights.sample_action(ecntxt, height, actions) 
         match = matches_by_actions.sample(action)
 
-        #print(' '*ecntxt.deepth, end='')
-        #status('[{}] [{}] [{}] [{}] -> [{}] ... subgoals: [{}]'.format(
-        #    ecntxt.deepth, height, goal,
-        #    ' ; '.join(map(str, set(ecntxt.hypths.values()))),
-        #    action,
-        #    ' ; '.join(map(str, match.subgoals))
-        #), end='')
-        #input()
-    
         if action == 'root':
             var_nm = self.get_fresh()
             body = self.sample_tree(

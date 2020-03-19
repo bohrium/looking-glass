@@ -41,7 +41,7 @@ class MetropolisHastingsSampler:
         self.weights.observe_manual()
         self.weights.load_weights('fav.r04')
 
-        self.TS = TreeSampler()
+        self.TS = TreeSampler(timeout_prob=1e-2)
 
     #=========================================================================#
     #=  2. METROPOLIS-HASTINGS STEP  =========================================#
@@ -57,17 +57,22 @@ class MetropolisHastingsSampler:
 
     def mh_step(self, old_tree, old_lp, old_ll):
         self.reset_varcount()
-        new_tree = self.propose_from(
-            old_tree, 
-            goal = tGridPair,
-            ecntxt = init_edge_cntxt(get_height(old_tree))
-        )
+        while True:
+            try:
+                new_tree = self.propose_from(
+                    old_tree, 
+                    goal = tGridPair,
+                    ecntxt = init_edge_cntxt(get_height(old_tree))
+                )
+            except AssertionError:
+                continue
+            break
         new_lp = self.log_prior(new_tree)
         new_ll = self.log_likelihood(new_tree)
         status('log prior [{:6.2f}]; log likelihood [{:6.2f}]'.format(
             new_lp, new_ll
         ))
-        print(CC+'@P {}@D '.format(str_from_tree(new_tree)))
+        #print(CC+'@P {}@D '.format(str_from_tree(new_tree)))
 
         d_ls = (
             - np.log(nb_nodes(new_tree)) + np.log(nb_nodes(old_tree)) # MH correction
@@ -276,7 +281,6 @@ class MetropolisHastingsSampler:
         height = get_height(tree)
 
         if targ_idx == 0:
-            print(CC+'@R start @D ')
             while True:
                 try:
                     subtree = self.TS.sample_tree(
@@ -287,13 +291,11 @@ class MetropolisHastingsSampler:
                 except InternalError as e:
                     print(e.msg, end='', flush=True)
                     continue
-            print('end')
             return subtree
 
         if type(tree) == list:
             targ_idx -= 1 
             head, args = tree[0], tree[1:]
-            print(head)
             partial_type = self.primitives[head][1]
             arg_idx = 0
             for arg in args:

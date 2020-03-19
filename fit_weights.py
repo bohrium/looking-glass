@@ -162,7 +162,7 @@ class WeightLearner:
             #status('height [{:2}] [{:2}] ***'.format(ecntxt.height, rtrn))
         else:
             ecntxt_idx = self.ecntxt_idx(ecntxt)
-            logit = self.height_logit(ecntxt_idx)[0]
+            logit = float(self.height_logit(ecntxt_idx))
             p = sigmoid(logit)
             rtrn = np.random.binomial(n=ecntxt.height-1, p=p)
             #status('height pi[{}] h[{:2}] -> [{:.2f}] -> [{:.2f}] -> h\'[{:2}]'.format(
@@ -347,12 +347,15 @@ class WeightLearner:
 
     def height_logit(self, ecntxt_idx):
         return ( 
-            self.w_height                       +
-            self.w_height_parent[ecntxt_idx.action] +
-            self.w_height_grandp[ecntxt_idx.parent]
+            self.w_height                           +
+            self.w_height_parent[ecntxt_idx.action] if ecntxt_idx.action is not None else 0 +
+            self.w_height_grandp[ecntxt_idx.parent] if ecntxt_idx.parent is not None else 0
         )
 
     def action_logit(self, ecntxt_idx, height):
+        if type(height)!=int:
+            print('!!!', height)
+            input()
         logits = (
                   self.w_action 
             +    (self.w_action_parent[:,ecntxt_idx.action] if ecntxt_idx.action is not None else 0)
