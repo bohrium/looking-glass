@@ -11,7 +11,7 @@ from utils import CC, pre                       # ansi
 from utils import secs_endured, megs_alloced    # profiling
 from utils import reseed, bernoulli, geometric  # math
 
-from sampler import get_grids, get_hardness
+from small_trainset import get_grids, get_hardness
 
 colors = 'KBRGYAPOCN'
 render_color = (

@@ -24,6 +24,9 @@ from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 from parse import Parser, str_from_tree, nb_nodes 
 from fit_weights import WeightLearner, init_edge_cntxt, next_edge_cntxt
 from resources import PrimitivesWrapper
+from demo import evaluate_tree
+from vis import str_from_grids, render_color
+
 
 Match = namedtuple('Match', ['head', 'subgoals']) 
 
@@ -94,14 +97,14 @@ class TreeSampler:
         action = self.weights.sample_action(ecntxt, height, actions) 
         match = matches_by_actions.sample(action)
 
-        print(' '*ecntxt.deepth, end='')
-        status('[{}] [{}] [{}] [{}] -> [{}] ... subgoals: [{}]'.format(
-            ecntxt.deepth, height, goal,
-            ' ; '.join(map(str, set(ecntxt.hypths.values()))),
-            action,
-            ' ; '.join(map(str, match.subgoals))
-        ), end='')
-        input()
+        #print(' '*ecntxt.deepth, end='')
+        #status('[{}] [{}] [{}] [{}] -> [{}] ... subgoals: [{}]'.format(
+        #    ecntxt.deepth, height, goal,
+        #    ' ; '.join(map(str, set(ecntxt.hypths.values()))),
+        #    action,
+        #    ' ; '.join(map(str, match.subgoals))
+        #), end='')
+        #input()
     
         if action == 'root':
             var_nm = self.get_fresh()
@@ -140,3 +143,19 @@ if __name__=='__main__':
         ecntxt = init_edge_cntxt(height=12)
     )
     print(str_from_tree(tree))
+
+    for _ in range(2):
+        xys = [] 
+        for _ in range(3):
+            for _ in range(10):
+                try:
+                    xys += list(evaluate_tree(tree, TS.primitives))
+                    break
+                except InternalError:
+                    continue
+        if not xys: continue
+        print(CC+str_from_grids([
+            z.colors for z in xys
+        ], render_color))
+
+

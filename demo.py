@@ -13,9 +13,6 @@ from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
 
 from parse import Parser, str_from_tree_flat, str_from_tree
-from fit_weights import WeightLearner
-from resources import PrimitivesWrapper
-from vis import str_from_grids, render_color
 from grid import Grid
 
 def print_grids(grids):
@@ -25,6 +22,7 @@ def print_grids(grids):
 
 where = ''
 samples = {}
+
 def evaluate_tree(tree, resources, depth=0, show_exec=False):
     global where, samples
     if not show_exec:
