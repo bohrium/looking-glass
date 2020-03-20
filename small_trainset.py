@@ -3,7 +3,7 @@
 
 import os
 import numpy as np
-from utils import reseed, paths
+from utils import reseed, paths, pre
 
 SAMPLES_FILE_NM = paths('train_list')
 HARDNESS_FILE_NM = paths('hardness')
@@ -22,8 +22,10 @@ def get_grids(i, dset='train'):
 
 def get_hardness(i):
     with open(HARDNESS_FILE_NM) as f:
-        lines = f.read().split('\n')
-        return int(lines[i].split()[1])
+        lines = [ln for ln in f.read().split('\n') if ln.strip()]
+        task_nb, hardness = map(int, lines[i].split())
+        pre(task_nb==i, 'not found!')
+        return hardness
 
 if __name__=='__main__':
     reseed(1729)
