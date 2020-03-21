@@ -1,0 +1,41 @@
+(
+split<color><gridpair> (rainbow noise) \ca:color -> (
+split<color><gridpair> (rainbow noise) \cb:color -> (
+assert<gridpair> (negate (eq<color> ca cb)) (
+
+split<int><gridpair> (svrl noise) \shapeside:int-> (
+split<shape><gridpair> (gen_shape noise shapeside) \sh:shape -> (
+split<shape><gridpair> (affine one shapeside (afew noise)) \quadside:int -> (
+split<grid><gridpair> (
+    paint_sprite (reserve_shape noise (new_grid quadside quadside) sh (center sh)) (monochrome sh ca) (center sh)
+) \quad:grid -> (
+
+split<int><gridpair> (affine two quadside one ) \sidex:int -> (
+split<int><gridpair> (affine two quadside zero) \sidey:int -> (
+
+split<grid><gridpair> (
+    paint_sprite (pair<ptdgrid> (new_grid sidex sidex) (pair<cell> quadside quadside)) (monochrome (make_plus sidex) cb) (pair<cell> quadside quadside)
+) \blankx:grid -> (
+
+    split<grid><gridpair> (new_grid sidey sidey) \blanky:grid -> (
+    pair<gridpair>
+        (paint_sprite (pair<ptdgrid>
+        (paint_sprite (pair<ptdgrid>
+        (paint_sprite (pair<ptdgrid>
+        (paint_sprite (pair<ptdgrid>
+        blankx
+        (corner blankx northwest)) quad (corner quad northwest))
+        (corner blankx southwest)) (reflect_grid quad north)  (corner quad southwest))
+        (corner blankx southeast)) (reflect_grid (reflect_grid quad west) north) (corner quad southeast))
+        (corner blankx northeast)) (reflect_grid quad west) (corner quad northeast))
+
+        (paint_sprite (pair<ptdgrid>
+        (paint_sprite (pair<ptdgrid>
+        (paint_sprite (pair<ptdgrid>
+        (paint_sprite (pair<ptdgrid>
+        blanky
+        (corner blanky northwest)) quad (corner quad northwest))
+        (corner blanky southwest)) (reflect_grid quad north)  (corner quad southwest))
+        (corner blanky southeast)) (reflect_grid (reflect_grid quad west) north) (corner quad southeast))
+        (corner blanky northeast)) (reflect_grid quad west) (corner quad northeast))
+))))))))))))
