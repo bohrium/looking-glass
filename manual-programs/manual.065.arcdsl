@@ -1,0 +1,15 @@
+(
+split<grid><gridpair> (new_grid three (affine one three (afew noise))) \blank:grid -> (
+split<cell><gridpair> (sample_cell noise blank) \cc:cell -> (
+    pair<gridpair>
+        (paint_cell blank cc red)
+        (paint_cell
+            (paint_cell
+                (paint_cell
+                    (paint_cell
+                        blank
+                    (displace cc northwest) green)
+                (displace cc southwest) cyan )
+            (displace cc southeast) orange)
+        (displace cc northeast) purple)
+)))
