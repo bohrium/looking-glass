@@ -1,0 +1,21 @@
+(
+split<shape><gridpair> (gen_shape noise (svrl noise)) \sh:shape -> (
+
+split<grid><gridpair>  (
+    fold<cell><grid> (cells_of sh) (monochrome sh (rainbow noise)) \cc:cell -> \gg:grid -> (
+        paint_cell gg cc (rainbow noise) 
+    )
+) \sp:grid -> ( 
+
+split<shape><gridpair> (new_grid (many noise) (many noise)) \blanky:grid -> (
+split<shape><gridpair> (paint_sprite (reserve_shape noise blanky sh (center sh)) sp (center sh)) \blankx:grid -> (
+
+repeat<gridpair> (svrl noise) (pair<gridpair> blankx blanky) \gp:gridpair -> (
+    split<ptdgrid><gridpair> (reserve_shape noise (fst<gridpair> gp) sh (center sh)) \pg:ptdgrid -> (
+        pair<gridpair>
+            (paint_sprite pg (monochrome sh cyan) (center sh))
+            (paint_sprite (pair<ptdgrid> (snd<gridpair> gp) (snd<ptdgrid> pg)) sp (center sh))
+    )
+)
+
+)))))
