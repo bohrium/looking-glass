@@ -1,0 +1,15 @@
+(
+split<int><gridpair> (many noise) \side:int -> (
+
+split<grid><gridpair> (
+    sprinkle noise (new_grid side side) \nn:noise -> (rainbow nn)
+) \g:grid -> (
+
+    pair<gridpair>
+        g
+        (
+            crop (pair<ptdgrid> g (corner g northeast))
+            (make_square three) (pair<cell> zero two)
+        ) 
+
+)))
