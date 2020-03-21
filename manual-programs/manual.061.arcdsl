@@ -1,0 +1,12 @@
+(
+split<grid><gridpair> (new_grid (many noise) (many noise)) \blank:grid -> (
+
+split<grid><gridpair> ( 
+    fst<clrdgrid> (fold<int><clrdgrid> (rows blank) (pair<clrdgrid> blank (rainbow noise)) \r:int -> \cg:clrdgrid -> (
+        pair<clrdgrid>
+            (paint_row (fst<clrdgrid> cg) r (snd<clrdgrid> cg))
+            (cond<color> (eq<int> (svrl noise) three) (rainbow noise) (snd<clrdgrid> cg))
+    ))
+) \flag:grid -> (
+    pair<gridpair> (sprinkle noise flag \nn:noise -> (rainbow nn)) flag
+)))
