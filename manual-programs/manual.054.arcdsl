@@ -1,0 +1,11 @@
+(
+split<shape><gridpair> (gen_shape noise (svrl noise)) \sh:shape -> (
+split<int><gridpair> (many noise) \side:int -> (
+split<grid><gridpair> (new_grid side side) \blank:grid -> (
+split<cell><gridpair> (snd<ptdgrid> (reserve_shape noise blank sh (center sh))) \cc:cell -> (
+
+pair<gridpair>
+    (paint_sprite (pair<ptdgrid> blank           cc       ) (monochrome sh cyan) (center sh))
+    (paint_sprite (pair<ptdgrid> blank (displace cc south)) (monochrome sh red ) (center sh))
+
+)))))
