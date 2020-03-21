@@ -31,7 +31,7 @@ from block import GENERIC_COLORS, Block, block_equals
 from grid import Grid
 
 from lg_types import tInt, tCell, tColor, tShape, tBlock, tGrid, tDir, tNoise
-from lg_types import tNmbrdBlock, tClrdCell, tPtdGrid, tGridPair, tNmbrdColor, tNmbrdGrid
+from lg_types import tNmbrdBlock, tClrdCell, tPtdGrid, tGridPair, tNmbrdColor, tNmbrdGrid, tClrdGrid
 from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 from lg_types import TS
 
@@ -90,9 +90,10 @@ class PrimitivesWrapper:
         '''
         self.primitives = {}
         common_types = {
-            tInt, tCell, tColor, tShape, tGrid, tBlock,
+            tInt, tCell, tColor, tShape, tGrid, tBlock, tInt.s(),
             tNmbrdGrid, tNmbrdGrid.s(), tShape.s(), tCell.s(),
-            tPtdGrid, tGridPair, tNmbrdColor, tNmbrdColor.s()
+            tPtdGrid, tGridPair, tNmbrdColor, tNmbrdColor.s(),
+            tClrdGrid,
         } 
         for goal in common_types:
             self.__make_nil__(elt=goal)
@@ -311,7 +312,7 @@ class PrimitivesWrapper:
     @sm(tInt.frm(tNoise))
     def svrl(noise): return  1+bernoulli(0.8)+bernoulli(0.8)+geometric(0.5)
     @sm(tInt.frm(tNoise))
-    def many(noise): return 8+geometric(2.0)
+    def many(noise): return 6+geometric(3.0)
     @sm(tInt)
     def zero(): return 0
     @sm(tInt)
@@ -353,6 +354,16 @@ class PrimitivesWrapper:
     def blue(): return 'B'
     @sm(tColor)
     def brown(): return 'N'
+    @sm(tColor)
+    def green(): return 'G'
+    @sm(tColor)
+    def yellow(): return 'Y'
+    @sm(tColor)
+    def orange(): return 'O'
+    @sm(tColor)
+    def purple(): return 'P'
+
+
  
     @sm(tGrid.frm(tInt).frm(tInt))
     def new_grid(h, w): return Grid(h,w)
@@ -412,6 +423,13 @@ class PrimitivesWrapper:
     @sm(tCell.frm(tDir).frm(tCell))
     def displace(cell, offset):
         return tuple(cell[i]+offset[i] for i in range(2))
+
+    @sm(tCell.s().frm(tShape))
+    def cells_of(shape):
+        h,w = shape.shape
+        return tuple((r,c) for r in range(h) for c in range(w) if shape[r,c])
+
+
 
     @sm(tShape.s().frm(tShape))
     def holes_of(shape):
@@ -542,16 +560,25 @@ class PrimitivesWrapper:
         new_grid.paint_sprite(sprite, ptd_field[1], cell_in_sprite)
         return new_grid
 
+    @sm(tGrid.frm(tCell).frm(tShape).frm(tPtdGrid))
+    def crop(ptd_field, shape, cell_in_sprite):
+        new_grid = ptd_field[0].copy()
+        new_grid.crop(shape, ptd_field[1], cell_in_sprite)
+        return new_grid
+
+
+
     @sm(tGrid.frm(tColor).frm(tCell).frm(tGrid))
     def paint_cell(field, cell, color):
         internal_assert(0<field.H and 0<field.W,
             'cannot paint vacuous grid!'
         )
-        if not (0<=cell[0]<field.H and 0<=cell[1]<field.W): cell = (0,0)
+        new_grid = field.copy()
+        if not (0<=cell[0]<field.H and 0<=cell[1]<field.W):
+            return new_grid
         #internal_assert(0<=cell[0]<field.H and 0<=cell[1]<field.W,
         #    'cell out of bounds!'
         #)
-        new_grid = field.copy()
         new_grid.paint_cell(cell, color)
         return new_grid
     @sm(tGrid.frm(tColor).frm(tInt).frm(tGrid))
@@ -565,10 +592,11 @@ class PrimitivesWrapper:
         new_grid.paint_column(row_nb, color)
         return new_grid
 
-    @sm(tGrid.frm(tColor).frm(tGrid).frm(tNoise))
-    def sprinkle(noise, field, color):
+    @sm(tGrid.frm(tColor.frm(tNoise)).frm(tGrid).frm(tNoise))
+    def sprinkle(noise, field, colorgen):
         new_grid = field.copy()
-        new_grid.noise(color, 0.5)
+        for _ in range(5):
+            new_grid.noise(colorgen(None), 0.1)
         return new_grid
 
     @sm(tGrid.frm(tCell).frm(tColor).frm(tGrid))

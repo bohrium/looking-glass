@@ -1,0 +1,40 @@
+(
+split<block><gridpair> ( 
+    cond<block> (eq<int> (svrl noise) three)    (pair<block> (make_plus   three) purple) (
+    cond<block> (eq<int> (svrl noise) three)    (pair<block> (make_times  three) red   ) (
+    cond<block> (eq<int> (svrl noise) three) 
+        (pair<block> (
+            silouhette (
+            paint_cell ( 
+            paint_cell (
+            paint_cell (
+            paint_cell (
+            paint_cell 
+                (new_grid three three)
+            (pair<cell> zero zero) gray )
+            (pair<cell> zero one ) gray )
+            (pair<cell> one  zero) gray )
+            (pair<cell> two  one ) gray )
+            (pair<cell> one  two ) gray 
+            )
+        ) blue) 
+        (pair<block> (
+            silouhette (
+            paint_cell ( 
+            paint_cell (
+            paint_cell (
+            paint_cell (
+            paint_cell 
+                (new_grid three three)
+            (pair<cell> zero one ) gray )
+            (pair<cell> zero two ) gray )
+            (pair<cell> one  one ) gray )
+            (pair<cell> one  two ) gray )
+            (pair<cell> two  zero) gray 
+            )
+        ) green)
+))) \b:block -> (
+    pair<gridpair>
+        (monochrome (fst<block> b) (rainbow noise))
+        (monochrome (make_square one) (snd<block> b))
+))

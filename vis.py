@@ -44,7 +44,7 @@ if __name__=='__main__':
     HARDNESS = 0
     print(CC+'hi!  here are some @R actual ARC @D tasks!')
     print(CC+'only showing hardness @P {} @D tasks...'.format(HARDNESS))
-    for i in range(100):
+    for i in range(0, 100):
         if get_hardness(i)!=HARDNESS: continue
         print(CC + 'task @O {}@D '.format(i))
 

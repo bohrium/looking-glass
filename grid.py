@@ -17,7 +17,7 @@ from block import GENERIC_COLORS, Block
 
 class Grid:
     def __init__(self, H, W):
-        internal_assert(H<=24 and W<=24, 'requested grid is too big')
+        internal_assert(H<=15 and W<=15, 'requested grid is too big')
 
         self.colors = np.array([['K' for _ in range(W)] for _ in range(H)])
         self.occupd = np.array([[0   for _ in range(W)] for _ in range(H)])
@@ -49,6 +49,28 @@ class Grid:
         G.occupd = np.copy(self.occupd)
         return G
 
+    def crop(self, shape, cell, shape_cell):
+        dr = cell[0]-shape_cell[0]
+        dc = cell[1]-shape_cell[1]
+
+        h, w = shape.shape
+        self.colors = np.array([
+            [
+                self.colors[r+dr,c+dc] if (0<=r+dr<self.H) and (0<=c+dc<self.W) and shape[r,c] else 'K'
+                for c in range(w)
+            ]
+            for r in range(h)
+        ]) 
+        self.occupd = np.array([
+            [
+                self.occupd[r+dr,c+dc] if (0<=r+dr<self.H) and (0<=c+dc<self.W) and shape[r,c] else 0
+                for c in range(w)
+            ]
+            for r in range(h)
+        ]) 
+        self.H = h
+        self.W = w
+
     def rotate(self, rotations):
         if not (self.H*self.W):
             return
@@ -71,7 +93,6 @@ class Grid:
                 np.transpose(arr) if rr*cc==1 else np.transpose(arr[::-1,:])[::-1,:]
             )
             self.H, self.W = self.W, self.H
-
         self.colors = transform(self.colors)
         self.occupd = transform(self.occupd)
 

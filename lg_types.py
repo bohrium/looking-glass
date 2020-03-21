@@ -140,6 +140,7 @@ tNmbrdBlock     = TS.add_product('nmbrdblock'   , tBlock, tInt  )
 tPtdGrid        = TS.add_product('ptdgrid'      , tGrid , tCell )
 tGridPair       = TS.add_product('gridpair'     , tGrid , tGrid )
 tNmbrdGrid      = TS.add_product('nmbrdgrid'    , tGrid , tInt  )
+tClrdGrid       = TS.add_product('clrdgrid'     , tGrid , tColor)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~  2.2 Templates for Fake Polymorphism  ~~~~~~~~~~~~~~~~~~~~~~~~~#

@@ -123,6 +123,21 @@ class InjectivityAnalyzer:
             #and is_nonidentity 
         )
 
+    def interest_stats(self, lg_tree):
+        ''' For a tree representing a function to a pair type X times Y,  
+            test whether function's support, as a relation between X and Y, 
+            has an injective transpose.  We assume that all noise that has a
+            syntactic chain to X is fully recoverable from X's value. 
+        '''
+        _, x_deps, y_deps = self.dependencies_of_pair(lg_tree)
+        nb_well_define_violations = len(y_deps.difference(x_deps))
+        nb_wasted_noise_variables = self.nb_noise_vars - len(y_deps.union(x_deps))
+        return (
+            nb_well_define_violations,
+            nb_wasted_noise_variables
+        )
+
+
 if __name__=='__main__':
     #code = '((\\n:noise -> (pair (mix n noise) (mix n noise))) noise)'
 #(split<int><gridpair> (afew noise) \\x1:int ->

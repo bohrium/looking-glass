@@ -42,6 +42,7 @@ class MetropolisHastingsSampler:
         self.weights.load_weights('fav.r04')
 
         self.TS = TreeSampler(timeout_prob=1e-2)
+        self.C = InjectivityAnalyzer()
 
     #=========================================================================#
     #=  2. METROPOLIS-HASTINGS STEP  =========================================#
@@ -91,37 +92,30 @@ class MetropolisHastingsSampler:
     #=  0. SCORING  ==========================================================#
     #=========================================================================#
 
-    def log_likelihood(self, tree):
+    def log_likelihood(self, tree,
+        hidden_noise = 1.0,
+        unused_noise = 0.5,
+        runtime_err  = 8.0,
+        monochrome   = 5.0, 
+        identity     = 5.0, 
+    ):
         ll = 0.0
+
+        nb_hidden_noise, nb_unused_noise = self.C.interest_stats(tree)
+        ll -= nb_hidden_noise * hidden_noise
+        ll -= nb_unused_noise * unused_noise
+
         x,y = None, None
-        try:
-            x, y = evaluate_tree(tree, self.primitives)
-        except:
-            ll -= 5.0
-        if type(y)==Grid:
-            colors = set(e for r in y.colors for e in r)
-            if colors in [{'K'}, set([])]:
-                ll -= 3.0
-            elif len(colors)==1:
-                ll -= 2.0
-        if type(x)==Grid:
-            colors = set(e for r in x.colors for e in r)
-            if colors in [{'K'}, set([])]:
-                ll -= 3.0
-            elif len(colors)==1:
-                ll -= 2.0
+        try: x, y = evaluate_tree(tree, self.primitives)
+        except: ll -= runtime_err
+
+        for g in (x, y):
+            if type(g)!=Grid: continue
+            colors = set(e for r in g.colors for e in r)
+            if len(colors) <= 1: ll -= monochrome / 2
 
         if type(x)==Grid and type(y)==Grid:
-            if x.H==y.H and x.W==y.W:
-                for h in range(x.H):
-                    for w in range(x.W):
-                        if x.colors[h][w]!=y.colors[h][w]:
-                            break
-                    else:
-                        continue
-                    break
-                else:
-                    ll -= 1.0
+            if np.array_equal(x.colors, y.colors): ll -= identity
 
         return ll
     
@@ -346,20 +340,42 @@ class MetropolisHastingsSampler:
 #=====  3. CONSOLE OUTPUT  ===================================================#
 #=============================================================================#
 
+def show_task(tree, nb_rows=1, nb_cols=3, nb_tries=10, primitives=None):
+    for _ in range(nb_rows):
+        xys = [] 
+        for _ in range(nb_cols):
+            for _ in range(10):
+                try:
+                    xys += [z.colors for z in evaluate_tree(tree, primitives)]
+                    xys.append(np.array([])) 
+                    break
+                except InternalError:
+                    continue
+        if not xys: continue
+        print(CC+str_from_grids(xys, render_color))
+
 if __name__=='__main__':
     MHS = MetropolisHastingsSampler()
     t, lp, ll = MHS.sample(1)
     for i in range(10000):
-        print(CC+'@R {}@D '.format(i))
-        if i%100==0:
-            with open('mcmc.new.arcdsl'.format(i), 'w') as f:
-                f.write(str_from_tree(t))
-        t, lp, ll = MHS.sample(1, t)
         try:
-            x, y = evaluate_tree(t, MHS.primitives)
-            print(CC+str_from_grids([
-                z.colors for z in [x,y]
-            ], render_color))
-        except:
-            print('uh oh!')
-            continue
+            print(CC+'i=@R {:6d}@D '.format(i))
+            if i%100==0:
+                input(CC+'@O show? @D ')
+                print(str_from_tree(t))
+                show_task(t, nb_rows=3, nb_cols=3, primitives=MHS.primitives) 
+                input(CC+'@O next? @D ')
+                with open('mcmc.new.arcdsl'.format(i), 'w') as f:
+                    f.write(str_from_tree(t))
+            t, lp, ll = MHS.sample(1, t)
+            try:
+                nb_cols = 1 if i%5 else 3 
+                show_task(t, nb_rows=1, nb_cols=nb_cols, primitives=MHS.primitives) 
+            except:
+                print('uh oh!')
+                continue
+        except KeyboardInterrupt:
+            status('you pressed ctrl+C!')
+            status('press [enter] to continue or [x] to close')
+            c = input()
+            if c: exit()
