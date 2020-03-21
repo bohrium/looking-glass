@@ -1,0 +1,19 @@
+(
+split<int><gridpair> (many noise) \side:int -> (
+repeat<gridpair> (svrl noise) (pair<gridpair> (new_grid side side) (new_grid side side)) \gp:gridpair -> (
+
+    split<shape><gridpair> (gen_shape noise three) \sh:shape -> (
+    assert<gridpair> (eq<int> (height<shape> sh) three) (
+    assert<gridpair> (eq<int> (width<shape> sh) three) (
+
+    split<grid><gridpair> (new_grid three three) \tic:grid -> (
+    split<grid><gridpair> (
+        paint_sprite (pair<ptdgrid> (fill tic orange (center sh)) (center sh)) (monochrome sh yellow) (center sh)  
+    ) \sp:grid -> (
+    split<ptdgrid><gridpair> (reserve_shape noise (fst<gridpair> gp) sh (center sh)) \pg:ptdgrid -> (
+        pair<gridpair>
+            (paint_sprite pg                 (monochrome sh yellow) (center sh))
+            (paint_sprite (pair<ptdgrid> (snd<gridpair> gp) (snd<ptdgrid> pg)) sp (center sh))
+    ))))))
+
+)))
