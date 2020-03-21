@@ -1,0 +1,7 @@
+{
+    "ARC_train":    "../projects/ARC/data/training/*.json", 
+    "manual":       "manual-programs/manual.*.arcdsl",
+    "train_list":   "pseudo-dev/train_list.txt", 
+    "hardness":     "pseudo-dev/hardness.txt", 
+    "weights":      "saved-weights",
+}

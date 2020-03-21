@@ -39,7 +39,7 @@ class MetropolisHastingsSampler:
 
         self.weights = WeightLearner()
         self.weights.observe_manual()
-        self.weights.load_weights('fav.r04')
+        self.weights.load_weights('fav.n20.r04')
 
         self.TS = TreeSampler(timeout_prob=1e-2)
         self.C = InjectivityAnalyzer()
@@ -72,8 +72,7 @@ class MetropolisHastingsSampler:
         new_ll = self.log_likelihood(new_tree)
         status('log prior [{:6.2f}]; log likelihood [{:6.2f}]'.format(
             new_lp, new_ll
-        ))
-        #print(CC+'@P {}@D '.format(str_from_tree(new_tree)))
+        ), end=' ')
 
         d_ls = (
             - np.log(nb_nodes(new_tree)) + np.log(nb_nodes(old_tree)) # MH correction
@@ -93,11 +92,12 @@ class MetropolisHastingsSampler:
     #=========================================================================#
 
     def log_likelihood(self, tree,
-        hidden_noise = 1.0,
-        unused_noise = 0.5,
-        runtime_err  = 8.0,
-        monochrome   = 5.0, 
-        identity     = 5.0, 
+        hidden_noise = 5 * 2.5,
+        unused_noise = 5 * 0.5,
+        runtime_err  = 5 * 5.0,
+        monochrome   = 5 * 5.0, 
+        identity     = 5 * 5.0, 
+        constant     = 5 * 5.0, 
     ):
         ll = 0.0
 
@@ -106,7 +106,10 @@ class MetropolisHastingsSampler:
         ll -= nb_unused_noise * unused_noise
 
         x,y = None, None
-        try: x, y = evaluate_tree(tree, self.primitives)
+        x_,y_ = None, None
+        try:
+            x, y = evaluate_tree(tree, self.primitives)
+            x_, y_ = evaluate_tree(tree, self.primitives)
         except: ll -= runtime_err
 
         for g in (x, y):
@@ -116,6 +119,9 @@ class MetropolisHastingsSampler:
 
         if type(x)==Grid and type(y)==Grid:
             if np.array_equal(x.colors, y.colors): ll -= identity
+
+        if type(y)==Grid and type(y_)==Grid:
+            if np.array_equal(y.colors, y_.colors): ll -= constant
 
         return ll
     
@@ -359,7 +365,7 @@ if __name__=='__main__':
     t, lp, ll = MHS.sample(1)
     for i in range(10000):
         try:
-            print(CC+'i=@R {:6d}@D '.format(i))
+            status('i=[{:4d}] '.format(i), end=' ')
             if i%100==0:
                 input(CC+'@O show? @D ')
                 print(str_from_tree(t))

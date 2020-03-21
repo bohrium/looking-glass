@@ -139,7 +139,7 @@ class WeightLearner:
             status('observing [{}] ... '.format(file_nm), end='')
             with open(file_nm) as f:
                 nb_nodes = self.observe_tree(Parser(f.read()).get_tree())
-            status('[{}] nodes found!'.format(nb_nodes))
+            status('[{:3}] nodes found!'.format(nb_nodes))
 
     def ecntxt_idx(self, ecntxt):
         return EdgeContext(
@@ -480,8 +480,8 @@ if __name__=='__main__':
     #    display_datapoint(l[i])
 
     #WL.compute_weights()
-    #WL.save_weights('fav.r04')
-    WL.load_weights('fav.r04')
+    #WL.save_weights('fav.n20.r04')
+    WL.load_weights('fav.n20.r04')
     print('done!')
 
     print(CC+'@P action-specific weights:@D ')

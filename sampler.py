@@ -50,7 +50,7 @@ class TreeSampler:
         self.primitives = PrimitivesWrapper().primitives
         self.weights = WeightLearner()
         self.weights.observe_manual()
-        self.weights.load_weights('fav.r04')
+        self.weights.load_weights('fav.n20.r04')
 
         self.reset_var_count()
         self.timeout_prob = timeout_prob
