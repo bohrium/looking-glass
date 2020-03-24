@@ -39,7 +39,7 @@ class MetropolisHastingsSampler:
 
         self.weights = WeightLearner()
         self.weights.observe_manual()
-        self.weights.load_weights('fav.n20.r04')
+        self.weights.load_weights('fav.n20.r09')
 
         self.TS = TreeSampler(timeout_prob=1e-2)
         self.C = InjectivityAnalyzer()

@@ -114,6 +114,7 @@ class WeightLearner:
         self.height_unit = height_unit
         self.branch_factor = 1
         self.regularizer = regularizer
+        self.none_val = -100.0
 
     def get_matches(self, goal, ecntxt):
         matches_by_actions = ListByKey()
@@ -157,7 +158,7 @@ class WeightLearner:
             deepth = ecntxt.deepth,
         )
 
-    def height_probs(self, ecntxt):
+    def height_prob_param(self, ecntxt):
         if ecntxt.height<=1:
             return 0
         if ecntxt.favord:
@@ -166,74 +167,29 @@ class WeightLearner:
             ecntxt_idx = self.ecntxt_idx(ecntxt)
             logit = float(self.height_logit(ecntxt_idx))
             p = sigmoid(logit)
-            rtrn = binomial(n=ecntxt.height-1, p=p)
             return (ecntxt.height-1, p)
 
-    def sample_height(self, ecntxt):
-        if ecntxt.height<=0:
-            return 0
-        if ecntxt.favord:
-            return ecntxt.height-1 
-        else:
-            ecntxt_idx = self.ecntxt_idx(ecntxt)
-            logit = float(self.height_logit(ecntxt_idx))
-            p = sigmoid(logit)
-            return binomial(n=ecntxt.height-1, p=p)
-
-    def action_logprobs(self, ecntxt, height, actions, none_val = -100.0):
+    def action_probs(self, ecntxt, height, actions):
         ecntxt_idx = self.ecntxt_idx(ecntxt)
         logits = self.action_logit(ecntxt_idx, height)
         logits = np.array([
-            none_val if idx is None else logits[idx] 
+            self.none_val if idx is None else logits[idx] 
             for a in actions
             for idx in [self.actions.idx(a)]
         ])
-        logits -= np.amax(logits)
-        norm = np.log(np.sum(np.exp(logits)))
-        return logits - norm
-
-    def sample_action(self, ecntxt, height, actions):
-        # TODO: implement in terms of action_logprobs
-        actions_by_idx = { 
-            idx : a
-            for a in actions
-            for idx in [self.actions.idx(a)]
-            if idx is not None
-        }
-        if not actions_by_idx:
-            return uniform(list(actions))
-        else:
-            action_indices = np.array(sorted(actions_by_idx.keys()))
-            ecntxt_idx = self.ecntxt_idx(ecntxt)
-            logits = self.action_logit(ecntxt_idx, height)[action_indices]
-            logits -= np.amax(logits)
-            probs = normalize_arr(np.exp(logits))
-            idx = np.random.choice(action_indices, p=probs) 
-            return actions_by_idx[idx]
+        probs = normalize_arr(np.exp(logits - np.amax(logits)))
+        return probs
 
     def favidx_probs(self, action, nbkids):
         pre(nbkids <= self.branch_factor, 'unprecedented branch factor!') 
         action_idx = self.actions.idx(action) 
         logits = (
-            np.full(nbkids, 1.0/nbkids)
+            np.full(nbkids, 0.0)
             if action_idx is None else
             self.favidx_logit(action_idx, nbkids)
         )
-        logits -= np.amax(logits)
-        return normalize_arr(np.exp(logits))
-
-    def sample_favidx(self, action, nbkids):
-        pre(nbkids <= self.branch_factor, 'unprecedented branch factor!') 
-        action_idx = self.actions.idx(action) 
-        logits = (
-            np.full(nbkids, 1.0/nbkids)
-            if action_idx is None else
-            self.favidx_logit(action_idx, nbkids)
-        )
-        logits -= np.amax(logits)
-        probs = normalize_arr(np.exp(logits))
-        idx = np.random.choice(nbkids, p=probs) 
-        return idx
+        probs = normalize_arr(np.exp(logits - np.amax(logits)))
+        return probs
 
     def observe_datapoint(self, ecntxt, height, head, matchs, nbkids, favidx, tindex):
         action = 'resource' if head in ecntxt.hypths else head
@@ -495,9 +451,9 @@ class WeightLearner:
                         ecntxt, height, action, matchs, nbkids, favidx,
                         learning_rate = eta * avg_tree_size / self.tree_sizes[tindex]  
                     )
-                    sum_loss_f += favord_loss * avg_tree_size / self.tree_sizes[tindex]
-                    sum_loss_h += height_loss * avg_tree_size / self.tree_sizes[tindex]
-                    sum_loss_a += action_loss * avg_tree_size / self.tree_sizes[tindex]
+                    sum_loss_f += favord_loss / self.tree_sizes[tindex]
+                    sum_loss_h += height_loss / self.tree_sizes[tindex]
+                    sum_loss_a += action_loss / self.tree_sizes[tindex]
 
             total_T += T
 
@@ -515,6 +471,6 @@ if __name__=='__main__':
     WL.observe_manual()
 
     WL.compute_weights()
-    WL.save_weights('fav.n04.r09')
+    WL.save_weights('fav.n20.r09')
     #WL.load_weights('fav.n20.r04')
     print('done!')

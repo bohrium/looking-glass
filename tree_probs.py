@@ -62,7 +62,7 @@ class TreePrior:
         return matches_by_actions
 
     def log_prior_inner(self, goal, ecntxt, height, tree):
-        param = self.weights.height_probs(ecntxt)
+        param = self.weights.height_prob_param(ecntxt)
         accum = 0.0 if type(param)==int else log_binom_dist(param, height)   
 
         if type(tree)==str:
@@ -116,10 +116,10 @@ class TreePrior:
         matches_by_action = self.get_matches(goal, ecntxt)
         alternative_actions = list(sorted(matches_by_action.keys()))
         action_idx = alternative_actions.index(action) 
-        lp = self.weights.action_logprobs(ecntxt, height, alternative_actions)
+        p = self.weights.action_probs(ecntxt, height, alternative_actions)
         return (
             accum
-            + lp[action_idx]
+            + np.log(p[action_idx])
             - np.log(matches_by_action.len_at(action)) # uniform sample 
         )
 

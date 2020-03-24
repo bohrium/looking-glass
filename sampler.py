@@ -14,46 +14,26 @@ import glob
 
 from utils import InternalError, internal_assert        # maybe
 from utils import CC, pre, status                       # ansi
-from utils import secs_endured, megs_alloced            # profiling
-from utils import reseed, bernoulli, geometric, uniform # math
+from utils import bernoulli, binomial                   # math
+
+from containers import ListByKey  
 
 from lg_types import tInt, tCell, tColor, tShape, tBlock, tGrid, tDir, tNoise
 from lg_types import tNmbrdBlock, tBlock, tClrdCell, tPtdGrid, tGridPair       
 from lg_types import tCount_, tFilter_, tArgmax_, tMap_, tRepeat_
 
 from parse import Parser, str_from_tree, nb_nodes 
-from fit_weights import WeightLearner, init_edge_cntxt, next_edge_cntxt
+from fit_weights import WeightLearner, init_edge_cntxt, next_edge_cntxt, Match
 from resources import PrimitivesWrapper
 from demo import evaluate_tree
 from vis import str_from_grids, render_color
-
-
-Match = namedtuple('Match', ['head', 'subgoals']) 
-
-class ListByKey: 
-    def __init__(self):
-        self.data = {}
-
-    def add(self, key, val):
-        if key not in self.data:
-            self.data[key] = []
-        self.data[key].append(val)
-
-    def keys(self):
-        return self.data.keys()
-
-    def sample(self, key):
-        return uniform(self.data[key])
-
-    def len_at(self, key):
-        return len(self.data[key])
 
 class TreeSampler:
     def __init__(self, timeout_prob=0.0):
         self.primitives = PrimitivesWrapper().primitives
         self.weights = WeightLearner()
         self.weights.observe_manual()
-        self.weights.load_weights('fav.n20.r04')
+        self.weights.load_weights('fav.n20.r09')
 
         self.reset_var_count()
         self.timeout_prob = timeout_prob
@@ -87,6 +67,25 @@ class TreeSampler:
             )
         return matches_by_actions
 
+    def sample_height(self, ecntxt):
+        param = self.weights.height_prob_param(ecntxt)
+        if type(param)==int:
+            return param
+        else:
+            n, p = param
+            return binomial(n, p)
+
+    def sample_action(self, ecntxt, height, actions):
+        # TODO : regularize orderedness of `actions`
+        actions = list(actions)
+        probs = self.weights.action_probs(ecntxt, height, actions)
+        return np.random.choice(actions, p=probs) 
+
+    def sample_favidx(self, action, nbkids):
+        probs = self.weights.favidx_probs(action, nbkids)  
+        idx = np.random.choice(nbkids, p=probs) 
+        return idx
+
     def sample_tree(self, goal, ecntxt):
         '''
         '''
@@ -95,8 +94,8 @@ class TreeSampler:
         matches_by_actions = self.get_matches(goal, ecntxt) 
         actions = matches_by_actions.keys()
     
-        height = self.weights.sample_height(ecntxt)
-        action = self.weights.sample_action(ecntxt, height, actions) 
+        height = self.sample_height(ecntxt)
+        action = self.sample_action(ecntxt, height, actions) 
         match = matches_by_actions.sample(action)
 
         if action == 'root':
@@ -111,7 +110,7 @@ class TreeSampler:
         else:
             nbkids = len(match.subgoals)
             if match.subgoals:
-                favidx = self.weights.sample_favidx(
+                favidx = self.sample_favidx(
                     action=action,
                     nbkids=nbkids
                 )
