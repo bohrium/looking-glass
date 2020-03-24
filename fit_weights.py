@@ -18,6 +18,7 @@
 # TODO: vectorize training set for faster training? 
 # TODO: vectorize training set for faster training? 
 
+from collections import namedtuple
 import numpy as np
 import tqdm
 
@@ -26,8 +27,32 @@ from utils import secs_endured, megs_alloced    # profiling
 from utils import reseed, uniform               # math
 from utils import paths                         # path
 
-from lg_types import tInt, tCell, tColor, tBlock, tGrid 
+from lg_types import tInt, tCell, tColor, tBlock, tGridPair 
 from parse import Parser, get_height, str_from_tree
+
+from resources import PrimitivesWrapper
+
+Match = namedtuple('Match', ['head', 'subgoals']) 
+
+class ListByKey: 
+    def __init__(self):
+        self.data = {}
+
+    def add(self, key, val):
+        if key not in self.data:
+            self.data[key] = []
+        self.data[key].append(val)
+
+    def keys(self):
+        return self.data.keys()
+
+    def sample(self, key):
+        return uniform(self.data[key])
+
+    def len_at(self, key):
+        return len(self.data[key])
+
+
 
 def log_choice(n, a):
     return (
@@ -64,6 +89,7 @@ Datapoint = namedtuple('Datapoint', [
     'ecntxt', # cntxt at edge to parent node
     'height', # height            --- in Nat      --- sampled based on ecntxt 
     'action', # action            --- in String   --- sampled based on ecntxt 
+    'matchs', # potential actions
     'nbkids', # branching factor  
     'favidx', # idx of fav child  --- in MaybeNat --- sampled based on ecntxt 
     'tindex', # index of ambient tree (for book-keeping only)
@@ -156,6 +182,32 @@ class WeightLearner:
         self.branch_factor = 1
 
         self.regularizer = regularizer
+
+        self.primitives = PrimitivesWrapper().primitives
+
+    def get_matches(self, goal, ecntxt):
+        matches_by_actions = ListByKey()
+        for head, (impl, sig) in self.primitives.items():
+            for conseqs, subgoals in sig.conseq_hypoth_pairs():
+                if goal not in conseqs: continue
+                matches_by_actions.add(
+                    head, Match(head = head, subgoals = subgoals)
+                )
+
+        for name, sig in ecntxt.hypths.items():
+            for conseqs, subgoals in sig.conseq_hypoth_pairs():
+                if goal not in conseqs: continue
+                matches_by_actions.add(
+                    'resource', Match(head = name, subgoals = subgoals)
+                )
+
+        if goal.kind=='from': 
+            matches_by_actions.add(
+                'root', Match(head = None, subgoals = [])
+            )
+        return matches_by_actions
+
+
 
     def observe_manual(self):
         for file_nm in paths('manual'):
@@ -264,10 +316,13 @@ class WeightLearner:
         #status('favidx [{}] [{}] -> [{}]'.format(action, nbkids, idx), mood='forest')
         return idx
 
-    def observe_datapoint(self, ecntxt, height, head, nbkids, favidx, tindex):
+    def observe_datapoint(self, ecntxt, height, head, matchs, nbkids, favidx, tindex):
         action = 'resource' if head in ecntxt.hypths else head
 
         self.actions.add(action)
+        for m in sorted(matchs.keys()):
+            self.actions.add(m)
+
         self.parents.add(ecntxt.parent)
         self.parents.add(ecntxt.action)
         self.genrics.add(get_generic(ecntxt.action))
@@ -276,6 +331,7 @@ class WeightLearner:
             ecntxt = ecntxt,
             height = height,
             action = action,
+            matchs = matchs,
             nbkids = nbkids,
             favidx = favidx,
             tindex = tindex,
@@ -287,6 +343,7 @@ class WeightLearner:
 
         height = get_height(tree)
         self.observe_tree_inner(
+            goal   = tGridPair              , 
             ecntxt = init_edge_cntxt(height),
             height = height                 , 
             tree   = tree                   ,
@@ -298,7 +355,7 @@ class WeightLearner:
         self.tree_sizes[tindex] = nb_nodes 
         return nb_nodes
 
-    def observe_tree_inner(self, ecntxt, height, tree, tindex):
+    def observe_tree_inner(self, goal, ecntxt, height, tree, tindex):
         if type(tree)==list:
             pre(type(tree[0])==str,
                 'program not in normal form due to caller {}'.format(tree[0])
@@ -321,6 +378,7 @@ class WeightLearner:
                 self.hypoths.add(var_type)
 
                 self.observe_tree_inner(
+                    goal   = goal.out,
                     ecntxt = next_edge_cntxt(
                         head, ecntxt, height, var_nm=var_nm, var_type=var_type
                     ),
@@ -331,6 +389,12 @@ class WeightLearner:
         elif type(tree) == list:
             caller, args = tree[0], tree[1:]
             pre(type(caller)==str, 'expected {} to be a string'.format(caller))
+            if caller in ecntxt.hypths: 
+                action = 'resource'
+                partial_type = ecntxt.hypths[caller]
+            else:
+                action = caller
+                partial_type = self.primitives[caller][1]
 
             nbkids = len(args) 
             pre(nbkids, 'program not in normal form due to redundant parens!')
@@ -341,6 +405,7 @@ class WeightLearner:
 
             for i, (arg, h) in enumerate(zip(args, heights)):
                 self.observe_tree_inner(
+                    goal   = partial_type.arg,
                     ecntxt = next_edge_cntxt(
                         head, ecntxt, height, idx=i, favidx=favidx
                     ),
@@ -348,11 +413,13 @@ class WeightLearner:
                     tree   = arg                      ,
                     tindex = tindex                   ,
                 )
+                partial_type = partial_type.out
 
         self.observe_datapoint(
             ecntxt = ecntxt,
             height = height,
             head   = head  ,
+            matchs = self.get_matches(goal, ecntxt),
             nbkids = nbkids,
             favidx = favidx,
             tindex = tindex,
@@ -418,7 +485,6 @@ class WeightLearner:
             +    (self.w_action_grandp[:,ecntxt_idx.parent] if ecntxt_idx.parent is not None else 0)
             + sum(self.w_action_hypths[:,       idx       ] for idx in ecntxt_idx.hypths)
             +     self.w_action_deepth * ecntxt_idx.deepth / self.height_unit
-            #+     self.w_action_height * height            / self.height_unit
             +    (self.w_action_heightN if 3<=height else 0)
             +    (self.w_action_height0 if height<=0 else 0)
             +    (self.w_action_height1 if height<=1 else 0)
@@ -427,9 +493,12 @@ class WeightLearner:
 
         return logits - np.amax(logits)
 
-    def grad_update(self, ecntxt, height, action, nbkids, favidx, learning_rate):
+    def grad_update(self, ecntxt, height, action, matchs, nbkids, favidx, learning_rate):
         ecntxt_idx = self.ecntxt_idx(ecntxt)
+        matchs_idxs = sorted(self.actions.idx(a) for a in matchs.keys())
         action_idx = self.actions.idx(action)
+        action_i = matchs_idxs.index(action_idx)
+        matchs_idxs = np.array(matchs_idxs)
 
         # update favord predictors
         if 2 <= nbkids:
@@ -456,24 +525,23 @@ class WeightLearner:
             height_loss = 0.0
 
         # update action predictors
-        # TODO: only possible actions should go here better   
-        probs = normalize_arr(np.exp( self.action_logit(ecntxt_idx, height) ))
-        action_loss = -np.log(probs[action_idx])
+        # only actions that are possible should go here
+        probs = normalize_arr(np.exp(self.action_logit(ecntxt_idx, height)[matchs_idxs]))
+        action_loss = -np.log(probs[action_i]) + np.log(matchs.len_at(action)) 
 
-        diffs = probs; diffs[action_idx] -= 1.0
+        diffs = probs; diffs[action_i] -= 1.0
         update = learning_rate * diffs
 
-        self.w_action                             -= update
-        self.w_action_parent[:,ecntxt_idx.action] -= update
-        self.w_action_grandp[:,ecntxt_idx.parent] -= update
+        self.w_action[matchs_idxs]                          -= update
+        self.w_action_parent[matchs_idxs,ecntxt_idx.action] -= update
+        self.w_action_grandp[matchs_idxs,ecntxt_idx.parent] -= update
         for idx in ecntxt_idx.hypths:
-            self.w_action_hypths[:,idx]           -= update
-        self.w_action_deepth                      -= update * ecntxt.deepth / self.height_unit
-        #self.w_action_height                      -= update * height        / self.height_unit
-        self.w_action_heightN                     -= update * (1 if 3<=height else -1)
-        self.w_action_height0                     -= update * (1 if height<=0 else -1)
-        self.w_action_height1                     -= update * (1 if height<=1 else -1)
-        self.w_action_height2                     -= update * (1 if height<=2 else -1)
+            self.w_action_hypths[matchs_idxs,idx]           -= update
+        self.w_action_deepth[matchs_idxs]                   -= update * ecntxt.deepth / self.height_unit
+        self.w_action_heightN[matchs_idxs]                  -= update * (1 if 3<=height else -1)
+        self.w_action_height0[matchs_idxs]                  -= update * (1 if height<=0 else -1)
+        self.w_action_height1[matchs_idxs]                  -= update * (1 if height<=1 else -1)
+        self.w_action_height2[matchs_idxs]                  -= update * (1 if height<=2 else -1)
 
         # l1 regularization:
         lr_reg = learning_rate * self.regularizer
@@ -504,9 +572,9 @@ class WeightLearner:
             for _ in tqdm.tqdm(range(T)):
                 train = list(self.train_set)
                 np.random.shuffle(train) 
-                for ecntxt, height, action, nbkids, favidx, tindex in train:
+                for ecntxt, height, action, matchs, nbkids, favidx, tindex in train:
                     favord_loss, height_loss, action_loss = self.grad_update(
-                        ecntxt, height, action, nbkids, favidx,
+                        ecntxt, height, action, matchs, nbkids, favidx,
                         learning_rate = eta * avg_tree_size / self.tree_sizes[tindex]  
                     )
                     sum_loss_f += favord_loss * avg_tree_size / self.tree_sizes[tindex]
@@ -516,7 +584,7 @@ class WeightLearner:
             total_T += T
 
             status('log priors f[{:4.2f}] h[{:4.2f}] a[{:6.2f}] '.format(
-                sum_loss_f / (len(self.tree_sizes) * t T),
+                sum_loss_f / (len(self.tree_sizes) * T),
                 sum_loss_h / (len(self.tree_sizes) * T),
                 sum_loss_a / (len(self.tree_sizes) * T),
             ), end='')

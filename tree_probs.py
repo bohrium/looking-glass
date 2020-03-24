@@ -23,9 +23,7 @@ from sampler import ListByKey, Match
 # TODO: use ecntxt_idx throughout (rather continually doing index searches)?
 # TODO: use stack for ecntxt resources (rather thann copying huge dicts)?
 
-# TODAY : account for height sampling in the below, too!! 
-# TODAY : account for favidx sampling in the below, too!! 
-# TODAY TODO: initial prior over total tree heights!
+# TODO: initial prior over total tree heights!
 
 class TreePrior: 
     def __init__(self, weights):
@@ -64,7 +62,6 @@ class TreePrior:
         return matches_by_actions
 
     def log_prior_inner(self, goal, ecntxt, height, tree):
-
         param = self.weights.height_probs(ecntxt)
         accum = 0.0 if type(param)==int else log_binomial(param, height)   
 
@@ -117,17 +114,14 @@ class TreePrior:
                 partial_type = partial_type.out
 
         matches_by_action = self.get_matches(goal, ecntxt)
-        alternative_actions = list(matches_by_action.keys())
+        alternative_actions = list(sorted(matches_by_action.keys()))
         action_idx = alternative_actions.index(action) 
         lp = self.weights.action_logprobs(ecntxt, height, alternative_actions)
         return (
             accum
             + lp[action_idx]
-            #- np.log(matches_by_action.len_at(action)) # uniform sample 
+            - np.log(matches_by_action.len_at(action)) # uniform sample 
         )
-
-# NB: Mystery of mismatched log prior scales?!
-#       ohhhh!  for height prediction, we don't have binomial during training? 
 
 if __name__=='__main__':
     WL = WeightLearner()
