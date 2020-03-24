@@ -5,25 +5,25 @@
     to use: 
 '''
 
-import numpy as np
-import tqdm
-
-from utils import CC, pre, status               # ansi
-from utils import secs_endured, megs_alloced    # profiling
-from utils import reseed, uniform               # math
-from utils import paths                         # path
-
-from parse import Parser, str_from_tree, nb_nodes, get_height 
-from lg_types import tGridPair, tColor
-from fit_weights import WeightLearner, init_edge_cntxt, next_edge_cntxt, log_binomial
-from resources import PrimitivesWrapper
-from sampler import ListByKey, Match
-
 # TODO: trees should bookkeep heights and nb_nodes
 # TODO: use ecntxt_idx throughout (rather continually doing index searches)?
 # TODO: use stack for ecntxt resources (rather thann copying huge dicts)?
 
 # TODO: initial prior over total tree heights!
+
+import numpy as np
+import tqdm
+
+from utils import CC, pre, status               # ansi
+from utils import log_binom_dist                # math
+from utils import paths                         # path
+
+from containers import ListByKey  
+
+from parse import Parser, str_from_tree, nb_nodes, get_height 
+from lg_types import tGridPair, tColor
+from fit_weights import WeightLearner, init_edge_cntxt, next_edge_cntxt, Match
+from resources import PrimitivesWrapper
 
 class TreePrior: 
     def __init__(self, weights):
@@ -63,7 +63,7 @@ class TreePrior:
 
     def log_prior_inner(self, goal, ecntxt, height, tree):
         param = self.weights.height_probs(ecntxt)
-        accum = 0.0 if type(param)==int else log_binomial(param, height)   
+        accum = 0.0 if type(param)==int else log_binom_dist(param, height)   
 
         if type(tree)==str:
             action = 'resource' if tree in ecntxt.hypths else tree

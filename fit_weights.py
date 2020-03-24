@@ -15,66 +15,27 @@
        and type matching with goal is already enforced via hard constraint
 '''
 
-# TODO: vectorize training set for faster training? 
+# TODO: lint all
 # TODO: vectorize training set for faster training? 
 
 from collections import namedtuple
 import numpy as np
 import tqdm
 
-from utils import CC, pre, status               # ansi
-from utils import secs_endured, megs_alloced    # profiling
-from utils import reseed, uniform               # math
-from utils import paths                         # path
+from utils import CC, pre, status                   # ansi
+from utils import uniform, binomial, log_binom_dist # math
+from utils import paths                             # path
 
-from lg_types import tInt, tCell, tColor, tBlock, tGridPair 
-from parse import Parser, get_height, str_from_tree
+from containers import Index, ListByKey  
 
+from lg_types import tGridPair 
+from parse import Parser, get_height
 from resources import PrimitivesWrapper
 
+# TODO: expose this global parameter
+max_depth = 20
+
 Match = namedtuple('Match', ['head', 'subgoals']) 
-
-class ListByKey: 
-    def __init__(self):
-        self.data = {}
-
-    def add(self, key, val):
-        if key not in self.data:
-            self.data[key] = []
-        self.data[key].append(val)
-
-    def keys(self):
-        return self.data.keys()
-
-    def sample(self, key):
-        return uniform(self.data[key])
-
-    def len_at(self, key):
-        return len(self.data[key])
-
-
-
-def log_choice(n, a):
-    return (
-          np.sum(np.log(np.arange((n-a)+1, n+1)))
-        - np.sum(np.log(np.arange(1, a+1)))
-    )
-
-def log_binomial(n_and_p, obs):
-    '''
-        return log ( (n choose obs) p^(obs) (1-p)^(n-obs)  )
-    '''
-    n, p = n_and_p
-    return (
-          log_choice(n, obs)
-        +      obs * np.log(    p)
-        + (n - obs)* np.log(1.0-p)
-    )
-
-
-
-
-from collections import namedtuple
 
 EdgeContext = namedtuple('EdgeContext', [
     'height', # at top of edge 
@@ -105,7 +66,6 @@ def init_edge_cntxt(height):
         deepth = 0       ,
     )
 
-max_depth=20
 def next_edge_cntxt(
     action, ecntxt, height,
     var_nm=None, var_type=None, idx=None, favidx=None
@@ -131,17 +91,8 @@ def next_edge_cntxt(
              deepth = min(max_depth, ecntxt.deepth+1) ,
         )
 
-def display_datapoint(dp):
-    status('[{:2}] [{:30}] [{:30}] [{:1}] [{:30}] [{:2}] --> '.format(*map(str, dp.ecntxt)), end='')
-    status('[{:4}] [{:2}] [{:30}]'.format(*map(str, (dp.favidx, dp.height, dp.action))), mood='forest')
-
 normalize_arr = (lambda a:
     a/np.sum(a)
-)
-
-normalize_dict = (lambda a:
-    (lambda s: {k:v/s for k,v in a.items()})
-    (sum(a.values()))
 )
 
 def get_generic(head):
@@ -149,41 +100,20 @@ def get_generic(head):
 
 sigmoid = lambda x: 1.0/(1.0+np.exp(-x))
 
-class Index:
-    '''
-    '''
-    def __init__(self, items=set()):
-        self.indices_by_elt = { v:i for i,v in enumerate(sorted(items)) }
-    def as_dict(self):
-        return self.indices_by_elt
-    def __str__(self):
-        return str(self.indices_by_elt)
-    def add(self, elt):
-        if elt in self.indices_by_elt: return
-        self.indices_by_elt[elt] = len(self.indices_by_elt) 
-    def __len__(self):
-        return len(self.indices_by_elt)
-    def idx(self, elt):
-        return self.indices_by_elt[elt] if elt in self.indices_by_elt else None
-
 class WeightLearner: 
     def __init__(self, regularizer=1e-9, height_unit=10.0):
         self.train_set = []
+        self.tree_sizes = {}
+        self.primitives = PrimitivesWrapper().primitives
 
         self.actions = Index({'root', 'resource'})
         self.parents = Index()
         self.genrics = Index()
         self.hypoths = Index({None})
 
-        self.tree_sizes = {}
-
         self.height_unit = height_unit
-
         self.branch_factor = 1
-
         self.regularizer = regularizer
-
-        self.primitives = PrimitivesWrapper().primitives
 
     def get_matches(self, goal, ecntxt):
         matches_by_actions = ListByKey()
@@ -207,14 +137,12 @@ class WeightLearner:
             )
         return matches_by_actions
 
-
-
     def observe_manual(self):
         for file_nm in paths('manual'):
-            #status('observing [{}] ... '.format(file_nm), end='')
+            status('observing [{}] ... '.format(file_nm), end='')
             with open(file_nm) as f:
                 nb_nodes = self.observe_tree(Parser(f.read()).get_tree())
-            #status('[{:3}] nodes found!'.format(nb_nodes))
+            status('[{:3}] nodes found!'.format(nb_nodes))
 
     def ecntxt_idx(self, ecntxt):
         return EdgeContext(
@@ -223,7 +151,7 @@ class WeightLearner:
             parent = self.parents.idx(ecntxt.parent),
             hypths = set(
                 self.hypoths.idx(h) for h in ecntxt.hypths.values()
-                if h in self.hypoths.as_dict()
+                if h in self.hypoths
             ),
             favord = ecntxt.favord,
             deepth = ecntxt.deepth,
@@ -238,24 +166,19 @@ class WeightLearner:
             ecntxt_idx = self.ecntxt_idx(ecntxt)
             logit = float(self.height_logit(ecntxt_idx))
             p = sigmoid(logit)
-            rtrn = np.random.binomial(n=ecntxt.height-1, p=p)
+            rtrn = binomial(n=ecntxt.height-1, p=p)
             return (ecntxt.height-1, p)
 
     def sample_height(self, ecntxt):
         if ecntxt.height<=0:
             return 0
         if ecntxt.favord:
-            rtrn = ecntxt.height-1 
-            #status('height [{:2}] [{:2}] ***'.format(ecntxt.height, rtrn))
+            return ecntxt.height-1 
         else:
             ecntxt_idx = self.ecntxt_idx(ecntxt)
             logit = float(self.height_logit(ecntxt_idx))
             p = sigmoid(logit)
-            rtrn = np.random.binomial(n=ecntxt.height-1, p=p)
-            #status('height pi[{}] h[{:2}] -> [{:.2f}] -> [{:.2f}] -> h\'[{:2}]'.format(
-            #    ecntxt.action[-1], ecntxt.height, logit, p, rtrn
-            #))
-        return rtrn
+            return binomial(n=ecntxt.height-1, p=p)
 
     def action_logprobs(self, ecntxt, height, actions, none_val = -100.0):
         ecntxt_idx = self.ecntxt_idx(ecntxt)
@@ -278,8 +201,7 @@ class WeightLearner:
             if idx is not None
         }
         if not actions_by_idx:
-            action = uniform(list(actions))
-            #status('action [{}] ***'.format(height, action), mood='sea')
+            return uniform(list(actions))
         else:
             action_indices = np.array(sorted(actions_by_idx.keys()))
             ecntxt_idx = self.ecntxt_idx(ecntxt)
@@ -287,9 +209,7 @@ class WeightLearner:
             logits -= np.amax(logits)
             probs = normalize_arr(np.exp(logits))
             idx = np.random.choice(action_indices, p=probs) 
-            action = actions_by_idx[idx]
-            #status('action [{:2}] -> [{}]'.format(height, action), mood='sea')
-        return action
+            return actions_by_idx[idx]
 
     def favidx_probs(self, action, nbkids):
         pre(nbkids <= self.branch_factor, 'unprecedented branch factor!') 
@@ -313,7 +233,6 @@ class WeightLearner:
         logits -= np.amax(logits)
         probs = normalize_arr(np.exp(logits))
         idx = np.random.choice(nbkids, p=probs) 
-        #status('favidx [{}] [{}] -> [{}]'.format(action, nbkids, idx), mood='forest')
         return idx
 
     def observe_datapoint(self, ecntxt, height, head, matchs, nbkids, favidx, tindex):
@@ -515,7 +434,7 @@ class WeightLearner:
         # update height predictors
         if not ecntxt.favord and 2<=ecntxt.height:
             prob = sigmoid( self.height_logit(ecntxt_idx)[0] ) 
-            height_loss = - log_binomial((ecntxt.height-1, prob), height)
+            height_loss = - log_binom_dist((ecntxt.height-1, prob), height)
             update = learning_rate * (prob - float(height)/ecntxt.height)
 
             self.w_height                           -= update 
@@ -525,7 +444,6 @@ class WeightLearner:
             height_loss = 0.0
 
         # update action predictors
-        # only actions that are possible should go here
         probs = normalize_arr(np.exp(self.action_logit(ecntxt_idx, height)[matchs_idxs]))
         action_loss = -np.log(probs[action_i]) + np.log(matchs.len_at(action)) 
 
@@ -600,29 +518,3 @@ if __name__=='__main__':
     WL.save_weights('fav.n04.r09')
     #WL.load_weights('fav.n20.r04')
     print('done!')
-
-    #print(CC+'@P action-specific weights:@D ')
-    #print(CC+'@B {:6} @O {:7} @O {:7} @O {:7} @O {:7} @G {:6}'.format(
-    #    'deepth', 'heightN', 'height0', 'height1', 'height2', 'unigrm'
-    #))
-    #named_weights = [(
-    #    WL.w_action_deepth[i],
-    #    WL.w_action_heightN[i],
-    #    WL.w_action_height0[i],
-    #    WL.w_action_height1[i],
-    #    WL.w_action_height2[i],
-    #    WL.w_action[i],
-    #    a
-    #) for a, i in WL.actions.as_dict().items()]
-    #for i, (w_dp, w_ht, w_ht0, w_ht1, w_ht2, w_un, a) in enumerate(
-    #    sorted(named_weights, key=lambda x:
-    #        2*x[0]+ x[2]+x[3]+x[4]+x[5]
-    #    )
-    #):
-    #    print(CC+'@B {:+6.2f} @O {:+7.2f} @O {:+7.2f} @O {:+7.2f} @O {:+7.2f} @G {:+6.2f} @D {:+6.2f} {}'.format(
-    #        w_dp, w_ht, w_ht0, w_ht1, w_ht2, w_un, 
-    #        2*w_dp + w_ht0+w_ht1+w_ht2+w_un,
-    #        a
-    #    ))
-    #    if (i+1)%10==0:
-    #        input()

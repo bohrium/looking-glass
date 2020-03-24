@@ -143,7 +143,7 @@ secs_endured = lambda: (time.time()-start_time)
 #=============================================================================#
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-#~~~~~~~~~~~~~  2.0. Random Seed and Generators  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~  2.0. Random Seed and Samplers  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 
 def reseed(s):
     random.seed(s)
@@ -151,6 +151,9 @@ def reseed(s):
 
 def bernoulli(p):
     return np.random.binomial(1, p)
+
+def binomial(n, p):
+    return np.random.binomial(n, p)
 
 def uniform(n):
     if type(n) in [int, np.int64]:
@@ -164,6 +167,26 @@ def geometric(scale):
     ''' Support on the (non-negative) naturals, with mean specified by `scale` 
     '''
     return np.random.geometric(1.0/(1.0 + scale)) - 1
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+#~~~~~~~~~~~~~  2.1. Log Densities and Distributions  ~~~~~~~~~~~~~~~~~~~~~~~~#
+
+def _log_choice_(n, a):
+    return (
+          np.sum(np.log(np.arange((n-a)+1, n+1)))
+        - np.sum(np.log(np.arange(1, a+1)))
+    )
+
+def log_binom_dist(n_and_p, obs):
+    '''
+        return log ( (n choose obs) p^(obs) (1-p)^(n-obs)  )
+    '''
+    n, p = n_and_p
+    return (
+          _log_choice_(n, obs)
+        +      obs * np.log(    p)
+        + (n - obs)* np.log(1.0-p)
+    )
 
 #=============================================================================#
 #=====  3. SIMULATE MAYBE TYPES VIA EXCEPTIONS  ==============================#
