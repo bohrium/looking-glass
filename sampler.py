@@ -45,6 +45,9 @@ class ListByKey:
     def sample(self, key):
         return uniform(self.data[key])
 
+    def len_at(self, key):
+        return len(self.data[key])
+
 class TreeSampler:
     def __init__(self, timeout_prob=0.0):
         self.primitives = PrimitivesWrapper().primitives

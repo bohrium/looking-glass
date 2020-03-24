@@ -431,7 +431,7 @@ class PrimitivesWrapper:
 
 
 
-    @sm(tShape.s().frm(tShape))
+    @sm(tCell.s().s().frm(tShape))
     def holes_of(shape):
         h, w = shape.shape
         bordered = np.zeros((h+2,w+2))
@@ -509,7 +509,7 @@ class PrimitivesWrapper:
         new_grid.reflect(axis_dir)
         return new_grid
 
-    @sm(tCell.s().frm(tDir).frm(tGrid))
+    @sm(tCell.frm(tDir).frm(tGrid))
     def corner(grid, direction):
         h,w = direction
         h = (

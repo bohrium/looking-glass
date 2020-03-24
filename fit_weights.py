@@ -15,6 +15,9 @@
        and type matching with goal is already enforced via hard constraint
 '''
 
+# TODO: vectorize training set for faster training? 
+# TODO: vectorize training set for faster training? 
+
 import numpy as np
 import tqdm
 
@@ -25,6 +28,26 @@ from utils import paths                         # path
 
 from lg_types import tInt, tCell, tColor, tBlock, tGrid 
 from parse import Parser, get_height, str_from_tree
+
+def log_choice(n, a):
+    return (
+          np.sum(np.log(np.arange((n-a)+1, n+1)))
+        - np.sum(np.log(np.arange(1, a+1)))
+    )
+
+def log_binomial(n_and_p, obs):
+    '''
+        return log ( (n choose obs) p^(obs) (1-p)^(n-obs)  )
+    '''
+    n, p = n_and_p
+    return (
+          log_choice(n, obs)
+        +      obs * np.log(    p)
+        + (n - obs)* np.log(1.0-p)
+    )
+
+
+
 
 from collections import namedtuple
 
@@ -136,10 +159,10 @@ class WeightLearner:
 
     def observe_manual(self):
         for file_nm in paths('manual'):
-            status('observing [{}] ... '.format(file_nm), end='')
+            #status('observing [{}] ... '.format(file_nm), end='')
             with open(file_nm) as f:
                 nb_nodes = self.observe_tree(Parser(f.read()).get_tree())
-            status('[{:3}] nodes found!'.format(nb_nodes))
+            #status('[{:3}] nodes found!'.format(nb_nodes))
 
     def ecntxt_idx(self, ecntxt):
         return EdgeContext(
@@ -153,6 +176,18 @@ class WeightLearner:
             favord = ecntxt.favord,
             deepth = ecntxt.deepth,
         )
+
+    def height_probs(self, ecntxt):
+        if ecntxt.height<=1:
+            return 0
+        if ecntxt.favord:
+            return ecntxt.height-1 
+        else:
+            ecntxt_idx = self.ecntxt_idx(ecntxt)
+            logit = float(self.height_logit(ecntxt_idx))
+            p = sigmoid(logit)
+            rtrn = np.random.binomial(n=ecntxt.height-1, p=p)
+            return (ecntxt.height-1, p)
 
     def sample_height(self, ecntxt):
         if ecntxt.height<=0:
@@ -170,7 +205,20 @@ class WeightLearner:
             #))
         return rtrn
 
+    def action_logprobs(self, ecntxt, height, actions, none_val = -100.0):
+        ecntxt_idx = self.ecntxt_idx(ecntxt)
+        logits = self.action_logit(ecntxt_idx, height)
+        logits = np.array([
+            none_val if idx is None else logits[idx] 
+            for a in actions
+            for idx in [self.actions.idx(a)]
+        ])
+        logits -= np.amax(logits)
+        norm = np.log(np.sum(np.exp(logits)))
+        return logits - norm
+
     def sample_action(self, ecntxt, height, actions):
+        # TODO: implement in terms of action_logprobs
         actions_by_idx = { 
             idx : a
             for a in actions
@@ -190,6 +238,17 @@ class WeightLearner:
             action = actions_by_idx[idx]
             #status('action [{:2}] -> [{}]'.format(height, action), mood='sea')
         return action
+
+    def favidx_probs(self, action, nbkids):
+        pre(nbkids <= self.branch_factor, 'unprecedented branch factor!') 
+        action_idx = self.actions.idx(action) 
+        logits = (
+            np.full(nbkids, 1.0/nbkids)
+            if action_idx is None else
+            self.favidx_logit(action_idx, nbkids)
+        )
+        logits -= np.amax(logits)
+        return normalize_arr(np.exp(logits))
 
     def sample_favidx(self, action, nbkids):
         pre(nbkids <= self.branch_factor, 'unprecedented branch factor!') 
@@ -260,9 +319,6 @@ class WeightLearner:
             nbkids = 1
             for (var_nm, var_type), body in tree.items():
                 self.hypoths.add(var_type)
-
-                augmented_hypths = ecntxt.hypths.copy()
-                augmented_hypths[var_nm] = var_type
 
                 self.observe_tree_inner(
                     ecntxt = next_edge_cntxt(
@@ -388,14 +444,10 @@ class WeightLearner:
             favidx_loss = 0.0
 
         # update height predictors
-        if not ecntxt.favord and ecntxt.height!=1:
-            p = height / float(ecntxt.height-1.0)
+        if not ecntxt.favord and 2<=ecntxt.height:
             prob = sigmoid( self.height_logit(ecntxt_idx)[0] ) 
-            height_loss = - (
-                p*np.log(prob) + (1.0-p)*np.log(1.0-prob)
-            ) * float(ecntxt.height-1.0)
-
-            update = learning_rate * (prob - p)
+            height_loss = - log_binomial((ecntxt.height-1, prob), height)
+            update = learning_rate * (prob - float(height)/ecntxt.height)
 
             self.w_height                           -= update 
             self.w_height_parent[ecntxt_idx.action] -= update
@@ -404,6 +456,7 @@ class WeightLearner:
             height_loss = 0.0
 
         # update action predictors
+        # TODO: only possible actions should go here better   
         probs = normalize_arr(np.exp( self.action_logit(ecntxt_idx, height) ))
         action_loss = -np.log(probs[action_idx])
 
@@ -442,70 +495,66 @@ class WeightLearner:
         self.initialize_weights()
         
         total_T = -1
-        tt = float(sum(self.tree_sizes.values()))/len(self.tree_sizes)
+        avg_tree_size = float(sum(self.tree_sizes.values()))/len(self.tree_sizes)
         for T, eta in [(1,0)]+schedule:
             sum_loss_f = 0.0 
             sum_loss_h = 0.0 
             sum_loss_a = 0.0 
+
             for _ in tqdm.tqdm(range(T)):
                 train = list(self.train_set)
                 np.random.shuffle(train) 
                 for ecntxt, height, action, nbkids, favidx, tindex in train:
                     favord_loss, height_loss, action_loss = self.grad_update(
                         ecntxt, height, action, nbkids, favidx,
-                        learning_rate = eta * tt / self.tree_sizes[tindex]  
+                        learning_rate = eta * avg_tree_size / self.tree_sizes[tindex]  
                     )
-                    sum_loss_f += favord_loss
-                    sum_loss_h += height_loss
-                    sum_loss_a += action_loss
+                    sum_loss_f += favord_loss * avg_tree_size / self.tree_sizes[tindex]
+                    sum_loss_h += height_loss * avg_tree_size / self.tree_sizes[tindex]
+                    sum_loss_a += action_loss * avg_tree_size / self.tree_sizes[tindex]
 
             total_T += T
-            nb_meas = T*len(self.train_set)
 
-            status('perplexities f[{:4.2f}] h[{:4.2f}] a[{:6.2f}] '.format(
-                np.exp(sum_loss_f/nb_meas),
-                np.exp(sum_loss_h/nb_meas),
-                np.exp(sum_loss_a/nb_meas),
+            status('log priors f[{:4.2f}] h[{:4.2f}] a[{:6.2f}] '.format(
+                sum_loss_f / (len(self.tree_sizes) * t T),
+                sum_loss_h / (len(self.tree_sizes) * T),
+                sum_loss_a / (len(self.tree_sizes) * T),
             ), end='')
             print(CC+'after @G {:3} @D epochs (learning rate @O {:7.1e}@D )'
                 .format(total_T, eta)
             )
 
 if __name__=='__main__':
-    WL = WeightLearner()
+    WL = WeightLearner(regularizer=1e-9)
     WL.observe_manual()
 
-    #l = list(WL.train_set)
-    #for i in range(5):
-    #    display_datapoint(l[i])
-
-    #WL.compute_weights()
-    #WL.save_weights('fav.n20.r04')
-    WL.load_weights('fav.n20.r04')
+    WL.compute_weights()
+    WL.save_weights('fav.n04.r09')
+    #WL.load_weights('fav.n20.r04')
     print('done!')
 
-    print(CC+'@P action-specific weights:@D ')
-    print(CC+'@B {:6} @O {:7} @O {:7} @O {:7} @O {:7} @G {:6}'.format(
-        'deepth', 'heightN', 'height0', 'height1', 'height2', 'unigrm'
-    ))
-    named_weights = [(
-        WL.w_action_deepth[i],
-        WL.w_action_heightN[i],
-        WL.w_action_height0[i],
-        WL.w_action_height1[i],
-        WL.w_action_height2[i],
-        WL.w_action[i],
-        a
-    ) for a, i in WL.actions.as_dict().items()]
-    for i, (w_dp, w_ht, w_ht0, w_ht1, w_ht2, w_un, a) in enumerate(
-        sorted(named_weights, key=lambda x:
-            2*x[0]+ x[2]+x[3]+x[4]+x[5]
-        )
-    ):
-        print(CC+'@B {:+6.2f} @O {:+7.2f} @O {:+7.2f} @O {:+7.2f} @O {:+7.2f} @G {:+6.2f} @D {:+6.2f} {}'.format(
-            w_dp, w_ht, w_ht0, w_ht1, w_ht2, w_un, 
-            2*w_dp + w_ht0+w_ht1+w_ht2+w_un,
-            a
-        ))
-        if (i+1)%10==0:
-            input()
+    #print(CC+'@P action-specific weights:@D ')
+    #print(CC+'@B {:6} @O {:7} @O {:7} @O {:7} @O {:7} @G {:6}'.format(
+    #    'deepth', 'heightN', 'height0', 'height1', 'height2', 'unigrm'
+    #))
+    #named_weights = [(
+    #    WL.w_action_deepth[i],
+    #    WL.w_action_heightN[i],
+    #    WL.w_action_height0[i],
+    #    WL.w_action_height1[i],
+    #    WL.w_action_height2[i],
+    #    WL.w_action[i],
+    #    a
+    #) for a, i in WL.actions.as_dict().items()]
+    #for i, (w_dp, w_ht, w_ht0, w_ht1, w_ht2, w_un, a) in enumerate(
+    #    sorted(named_weights, key=lambda x:
+    #        2*x[0]+ x[2]+x[3]+x[4]+x[5]
+    #    )
+    #):
+    #    print(CC+'@B {:+6.2f} @O {:+7.2f} @O {:+7.2f} @O {:+7.2f} @O {:+7.2f} @G {:+6.2f} @D {:+6.2f} {}'.format(
+    #        w_dp, w_ht, w_ht0, w_ht1, w_ht2, w_un, 
+    #        2*w_dp + w_ht0+w_ht1+w_ht2+w_un,
+    #        a
+    #    ))
+    #    if (i+1)%10==0:
+    #        input()
