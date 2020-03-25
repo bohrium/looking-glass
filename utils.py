@@ -168,6 +168,9 @@ def geometric(scale):
     '''
     return np.random.geometric(1.0/(1.0 + scale)) - 1
 
+def poisson(l):
+    return np.random.poisson(l)
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #~~~~~~~~~~~~~  2.1. Log Densities and Distributions  ~~~~~~~~~~~~~~~~~~~~~~~~#
 
@@ -178,14 +181,20 @@ def _log_choice_(n, a):
     )
 
 def log_binom_dist(n_and_p, obs):
-    '''
-        return log ( (n choose obs) p^(obs) (1-p)^(n-obs)  )
-    '''
+    ''' return log ( (n choose obs) p^(obs) (1-p)^(n-obs)  ) '''
     n, p = n_and_p
     return (
           _log_choice_(n, obs)
         +      obs * np.log(    p)
         + (n - obs)* np.log(1.0-p)
+    )
+
+def log_poisson(l, k):
+    ''' return log ( ( l^k / k! ) / e^l ) '''
+    return (
+        k * np.log(l)
+        -np.sum(np.log(np.arange(1, k+1)))
+        -l
     )
 
 #=============================================================================#

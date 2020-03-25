@@ -1,5 +1,5 @@
 ''' author: samtenka
-    change: 2020-03-12
+    change: 2020-03-25
     create: 2020-03-12
     descrp: generate a script of type grid x grid <-- noise
     to use: type
@@ -14,7 +14,7 @@ import glob
 
 from utils import InternalError, internal_assert        # maybe
 from utils import CC, pre, status                       # ansi
-from utils import bernoulli, binomial                   # math
+from utils import bernoulli, binomial, poisson          # math
 
 from containers import ListByKey  
 
@@ -33,7 +33,7 @@ class TreeSampler:
         self.primitives = PrimitivesWrapper().primitives
         self.weights = WeightLearner()
         self.weights.observe_manual()
-        self.weights.load_weights('fav.n20.r09')
+        self.weights.load_weights('fav.n20.r06')
 
         self.reset_var_count()
         self.timeout_prob = timeout_prob
@@ -86,7 +86,15 @@ class TreeSampler:
         idx = np.random.choice(nbkids, p=probs) 
         return idx
 
-    def sample_tree(self, goal, ecntxt):
+    def sample_tree(self):
+        height = poisson(self.weights.top_height_prob_param())
+        print(height)
+        return self.sample_tree_inner(
+            goal = tGridPair,
+            ecntxt = init_edge_cntxt(height=height)
+        )
+
+    def sample_tree_inner(self, goal, ecntxt):
         '''
         '''
         pre(not bernoulli(self.timeout_prob), 'timeout')
@@ -98,9 +106,17 @@ class TreeSampler:
         action = self.sample_action(ecntxt, height, actions) 
         match = matches_by_actions.sample(action)
 
+        #status('[{}], [{}], [{}], [{}]'.format(
+        #    goal,
+        #    set(ecntxt.hypths.values()),
+        #    action,
+        #    'resource' in matches_by_actions.data
+        #))
+        #input()
+
         if action == 'root':
             var_nm = self.get_fresh()
-            body = self.sample_tree(
+            body = self.sample_tree_inner(
                 goal   = goal.out,
                 ecntxt = next_edge_cntxt(
                     action, ecntxt, height, var_nm=var_nm, var_type=goal.arg
@@ -115,7 +131,7 @@ class TreeSampler:
                     nbkids=nbkids
                 )
             subtrees = [
-                self.sample_tree(
+                self.sample_tree_inner(
                     goal   = subgoal,
                     ecntxt = next_edge_cntxt(
                         action, ecntxt, height, idx=nbkids-1-i, favidx=favidx
@@ -130,10 +146,7 @@ class TreeSampler:
 
 if __name__=='__main__':
     TS = TreeSampler()
-    tree = TS.sample_tree(
-        goal = tGridPair,
-        ecntxt = init_edge_cntxt(height=12)
-    )
+    tree = TS.sample_tree() 
     print(str_from_tree(tree))
 
     for _ in range(2):

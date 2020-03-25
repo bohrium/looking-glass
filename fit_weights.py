@@ -1,5 +1,5 @@
 ''' author: samtenka
-    change: 2020-03-01
+    change: 2020-03-25
     create: 2019-02-25
     descrp: learn dsl generation weights from observed trees 
     to use: To train on some trees then sample from a child of 'root' with one
@@ -15,8 +15,11 @@
        and type matching with goal is already enforced via hard constraint
 '''
 
+import cProfile
+
 # TODO: lint all
 # TODO: vectorize training set for faster training? 
+# TODO: unify tree traversal
 
 from collections import namedtuple
 import numpy as np
@@ -33,7 +36,7 @@ from parse import Parser, get_height
 from resources import PrimitivesWrapper
 
 # TODO: expose this global parameter
-max_depth = 20
+max_depth = 30
 
 Match = namedtuple('Match', ['head', 'subgoals']) 
 
@@ -101,9 +104,10 @@ def get_generic(head):
 sigmoid = lambda x: 1.0/(1.0+np.exp(-x))
 
 class WeightLearner: 
-    def __init__(self, regularizer=1e-9, height_unit=10.0):
+    def __init__(self, regularizer=None, height_unit=10.0):
         self.train_set = []
         self.tree_sizes = {}
+        self.tree_heights = {}
         self.primitives = PrimitivesWrapper().primitives
 
         self.actions = Index({'root', 'resource'})
@@ -157,6 +161,9 @@ class WeightLearner:
             favord = ecntxt.favord,
             deepth = ecntxt.deepth,
         )
+
+    def top_height_prob_param(self): 
+        return self.w_top_height[0]
 
     def height_prob_param(self, ecntxt):
         if ecntxt.height<=1:
@@ -217,6 +224,9 @@ class WeightLearner:
         old_l = len(self.train_set)
 
         height = get_height(tree)
+
+        self.tree_heights[tindex] = height
+
         self.observe_tree_inner(
             goal   = tGridPair              , 
             ecntxt = init_edge_cntxt(height),
@@ -307,6 +317,7 @@ class WeightLearner:
 
         self.w_favidx_action = np.full((self.branch_factor, out_dim), 0.0)
 
+        self.w_top_height    = np.full(1      ,  0.0)
         self.w_height        = np.full(1      ,  0.0)
         self.w_height_parent = np.full(par_dim,  0.0)
         self.w_height_grandp = np.full(par_dim,  0.0)
@@ -435,7 +446,7 @@ class WeightLearner:
                         exp(w_(atom,resource))
         '''
         self.initialize_weights()
-        
+
         total_T = -1
         avg_tree_size = float(sum(self.tree_sizes.values()))/len(self.tree_sizes)
         for T, eta in [(1,0)]+schedule:
@@ -466,11 +477,21 @@ class WeightLearner:
                 .format(total_T, eta)
             )
 
-if __name__=='__main__':
-    WL = WeightLearner(regularizer=1e-9)
-    WL.observe_manual()
+        self.w_top_height[:] = (
+            float(sum(self.tree_heights.values())) / 
+            len(self.tree_heights)
+        )
+        
+        return sum_loss_f, sum_loss_h, sum_loss_a
 
-    WL.compute_weights()
-    WL.save_weights('fav.n20.r09')
-    #WL.load_weights('fav.n20.r04')
+if __name__=='__main__':
+    WL = WeightLearner()
+    WL.observe_manual()
+    for r in [6]:
+        WL.regularizer = 10**(-r)
+        lf, lh, la = WL.compute_weights()
+        WL.save_weights('fav.n20.r{:02d}'.format(r))
+        status('r = [{}];   f = [{}];   h = [{}];   a = [{}]'.format(
+            r, lf, lh, la
+        ))
     print('done!')

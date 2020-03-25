@@ -15,7 +15,7 @@ import numpy as np
 import tqdm
 
 from utils import CC, pre, status               # ansi
-from utils import log_binom_dist                # math
+from utils import log_binom_dist, log_poisson   # math
 from utils import paths                         # path
 
 from containers import ListByKey  
@@ -32,11 +32,14 @@ class TreePrior:
 
     def log_prior(self, tree):
         height = get_height(tree)
-        return self.log_prior_inner(
-            goal   = tGridPair,
-            ecntxt = init_edge_cntxt(height),
-            height = height,
-            tree   = tree,
+        return (
+            log_poisson(weights.top_height, height) +
+            self.log_prior_inner(
+                goal   = tGridPair,
+                ecntxt = init_edge_cntxt(height),
+                height = height,
+                tree   = tree,
+            )
         )
 
     def get_matches(self, goal, ecntxt):
