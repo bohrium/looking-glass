@@ -2,10 +2,8 @@
 split<int><gridpair> (svrl noise) \side:int -> (
 split<grid><gridpair> (new_grid side side) \blank:grid -> (
 split<grid><gridpair> (
-    sprinkle noise (
-        sprinkle noise (
-            sprinkle noise (fill blank gray (corner blank northwest)) \nn:noise -> (rainbow noise)
-        ) \nn:noise -> (rainbow noise)
+    sprinkle noise four (
+        fill blank gray (corner blank northwest)
     ) \nn:noise -> (rainbow noise)
 ) \filled:grid -> (
 

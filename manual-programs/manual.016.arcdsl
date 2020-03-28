@@ -18,7 +18,7 @@ pair<gridpair>
         split<grid><grid> (new_grid nb_shapes nb_shapes) \yblank:grid -> (
         split<cell><grid> (corner yblank northwest) \crnr:cell -> (
         fst<ptdgrid> (
-        repeat<ptdgrid> nb_shapes (pair<ptdgrid> (fill yblank gray crnr) crnr) \g:ptdgrid -> (
+        repeat<ptdgrid> nb_shapes (pair<ptdgrid> yblank crnr) \g:ptdgrid -> (
             pair<ptdgrid>
             (paint_cell (fst<ptdgrid> g) (snd<ptdgrid> g) cyan)
             (displace (snd<ptdgrid> g) southeast)

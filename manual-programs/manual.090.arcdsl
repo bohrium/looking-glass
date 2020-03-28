@@ -1,0 +1,18 @@
+(
+    split<grid><gridpair> (
+        sprinkle noise four ( 
+            fill (new_grid three three) gray (pair<cell> zero zero) 
+        ) \nn:noise -> (rainbow noise)
+    ) \half:grid -> (
+    pair<gridpair> half (
+        split<grid><grid> (new_grid (affine two (height<grid> half) zero) (width<grid> half)) \blank:grid -> (
+            paint_sprite (pair<ptdgrid> (
+                paint_sprite (pair<ptdgrid>
+                    blank
+                (corner blank northwest))
+                half (corner half northwest) 
+            ) (displace (corner blank northwest) (pair<cell> (height<grid> half) zero)))
+            (reflect_grid half west) (corner half northwest)
+        )
+    ))
+)

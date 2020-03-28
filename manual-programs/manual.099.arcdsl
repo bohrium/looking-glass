@@ -1,0 +1,10 @@
+(
+    split<grid><gridpair> (new_grid (many noise) (many noise)) \blank:grid -> (
+        pair<gridpair> blank (
+            paint_sprite
+                (pair<ptdgrid> blank (corner blank northwest))
+                (monochrome (rectangle (height<grid> blank) (width<grid> blank) zero) cyan)
+                (corner blank northwest)
+        )
+    )
+)

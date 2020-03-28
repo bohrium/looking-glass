@@ -1,6 +1,6 @@
 (
 split<grid><gridpair> (
-    sprinkle noise (new_grid three three) \nn:noise -> (rainbow nn)
+    sprinkle noise three (new_grid three three) \nn:noise -> (rainbow nn)
 ) \x:grid -> (
     pair<gridpair> x (rotate_grid x two)
 ))

@@ -8,5 +8,5 @@ split<grid><gridpair> (
             (cond<color> (eq<int> (svrl noise) three) (rainbow noise) (snd<clrdgrid> cg))
     ))
 ) \flag:grid -> (
-    pair<gridpair> (sprinkle noise flag \nn:noise -> (rainbow nn)) flag
+    pair<gridpair> (sprinkle noise one flag \nn:noise -> (rainbow nn)) flag
 )))

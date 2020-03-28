@@ -90,6 +90,7 @@ def demonstrate(file_nm, print_text=True, nb_rows=1, nb_cols=1, nb_tries=10, sho
                 except InternalError:
                     continue
                 except Exception as e:
+                    print(CC+'@R error@D ')
                     print(CC+where)
                     print(e)
                     break
@@ -117,6 +118,6 @@ if __name__=='__main__':
     file_nms = paths('manual')
     for fnm in file_nms:
         print(fnm)
-        demonstrate(fnm, print_text=False, show_exec=False, nb_rows=3, nb_cols=3)
+        demonstrate(fnm, print_text=False, show_exec=False, nb_rows=2, nb_cols=2)
         input(CC+'@O next?@D ')
 

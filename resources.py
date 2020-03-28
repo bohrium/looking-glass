@@ -269,6 +269,9 @@ class PrimitivesWrapper:
     @sm(tInt.frm(tInt))
     def negate(a): return 1-a
 
+    @sm(tInt.frm(tInt))
+    def negative(a): return -a
+
     @sm(tInt.s().frm(tInt))
     def range(a): return tuple(range(a))
 
@@ -291,6 +294,14 @@ class PrimitivesWrapper:
             lhs.shape==rhs.shape
             and np.sum(np.abs(lhs-rhs))==0
         ) else 0
+
+    @sm(tInt.frm(tGrid))
+    def height_C_grid_J_(g):
+        return g.colors.shape[0]
+
+    @sm(tInt.frm(tGrid))
+    def width_C_grid_J_(g):
+        return g.colors.shape[1] if len(g.colors.shape)==2 else 0
 
     @sm(tInt.frm(tShape))
     def height_C_shape_J_(s):
@@ -345,6 +356,8 @@ class PrimitivesWrapper:
     @sm(tColor.frm(tNoise))
     def rainbow(noise): return uniform(GENERIC_COLORS)
     @sm(tColor)
+    def black(): return 'K'
+    @sm(tColor)
     def gray(): return 'A'
     @sm(tColor)
     def red(): return 'R'
@@ -379,6 +392,13 @@ class PrimitivesWrapper:
         SG.set_side(side)
         shape = SG.search(crop=True) 
         return shape 
+
+    @sm(tShape.frm(tInt).frm(tInt).frm(tInt))
+    def rectangle(height, width, is_filled):
+        shape = np.ones((height, width))
+        if not is_filled:
+            shape[1:height-1, 1:width-1] = 0
+        return shape
 
     @sm(tShape)
     def small_square(): return PrimitivesWrapper.make_square(3) 
@@ -592,11 +612,11 @@ class PrimitivesWrapper:
         new_grid.paint_column(row_nb, color)
         return new_grid
 
-    @sm(tGrid.frm(tColor.frm(tNoise)).frm(tGrid).frm(tNoise))
-    def sprinkle(noise, field, colorgen):
+    @sm(tGrid.frm(tColor.frm(tNoise)).frm(tGrid).frm(tInt).frm(tNoise))
+    def sprinkle(noise, amount, field, colorgen):
         new_grid = field.copy()
-        for _ in range(5):
-            new_grid.noise(colorgen(None), 0.1)
+        for _ in range(2**amount):
+            new_grid.noise(colorgen(None), 1.0/8) 
         return new_grid
 
     @sm(tGrid.frm(tCell).frm(tColor).frm(tGrid))

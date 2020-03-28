@@ -86,7 +86,7 @@ class Grid:
             'do not know how to reflect across this axis'
         )
         if rr*rr+cc*cc == 1: # orthogonal flip
-            transform = lambda arr: arr[::-1,:] if rr else arr[:,::-1]
+            transform = lambda arr: arr[::-1,:] if cc else arr[:,::-1]
         else: # diagonal flip
             transform = (
                 lambda arr:

@@ -2,7 +2,7 @@
 split<int><gridpair> (many noise) \side:int -> (
 
 split<grid><gridpair> (
-    sprinkle noise (new_grid side side) \nn:noise -> (rainbow nn)
+    sprinkle noise three (new_grid side side) \nn:noise -> (rainbow nn)
 ) \g:grid -> (
 
     pair<gridpair>

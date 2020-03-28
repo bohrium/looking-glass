@@ -25,6 +25,8 @@ def str_from_grids(grids, render=render_number):
     ''' Return a colorizable string given a list of (potentially non-uniformly
         shaped) grids of numbers or of colors.
     '''
+    if not grids:
+        return ''
     heights, widths = ([(g.shape[i] if i<len(g.shape) else 0) for g in grids] for i in range(2))
 
     lines = ['' for h in range(2+max(heights))]
@@ -44,7 +46,7 @@ if __name__=='__main__':
     HARDNESS = 0
     print(CC+'hi!  here are some @R actual ARC @D tasks!')
     print(CC+'only showing hardness @P {} @D tasks...'.format(HARDNESS))
-    for i in range(0, 100):
+    for i in range(100):
         if get_hardness(i)!=HARDNESS: continue
         print(CC + 'task @O {}@D '.format(i))
 

@@ -20,14 +20,8 @@ split<grid><gridpair> (
     split<grid><gridpair> (new_grid sidey sidey) \blanky:grid -> (
     pair<gridpair>
         (paint_sprite (pair<ptdgrid>
-        (paint_sprite (pair<ptdgrid>
-        (paint_sprite (pair<ptdgrid>
-        (paint_sprite (pair<ptdgrid>
         blankx
         (corner blankx northwest)) quad (corner quad northwest))
-        (corner blankx southwest)) (reflect_grid quad north)  (corner quad southwest))
-        (corner blankx southeast)) (reflect_grid (reflect_grid quad west) north) (corner quad southeast))
-        (corner blankx northeast)) (reflect_grid quad west) (corner quad northeast))
 
         (paint_sprite (pair<ptdgrid>
         (paint_sprite (pair<ptdgrid>
@@ -35,7 +29,7 @@ split<grid><gridpair> (
         (paint_sprite (pair<ptdgrid>
         blanky
         (corner blanky northwest)) quad (corner quad northwest))
-        (corner blanky southwest)) (reflect_grid quad north)  (corner quad southwest))
+        (corner blanky southwest)) (reflect_grid quad west)  (corner quad southwest))
         (corner blanky southeast)) (reflect_grid (reflect_grid quad west) north) (corner quad southeast))
-        (corner blanky northeast)) (reflect_grid quad west) (corner quad northeast))
+        (corner blanky northeast)) (reflect_grid quad north) (corner quad northeast))
 ))))))))))))

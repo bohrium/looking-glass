@@ -7,8 +7,8 @@ split<grid><gridpair> (new_grid (many noise) (many noise)) \afterzero:grid -> (
 split<cell><gridpair> (snd<ptdgrid> (reserve_shape noise afterzero (silouhette quadrant) (corner quadrant southeast))) \cc:cell -> (
 
 split<grid><gridpair> (paint_sprite (pair<ptdgrid> afterzero            cc           )                             quadrant              (corner quadrant southeast)) \afterone  :ptdgrid -> (
-split<grid><gridpair> (paint_sprite (pair<ptdgrid> afterone   (displace cc south    ))               (reflect_grid quadrant south)       (corner quadrant northeast)) \aftertwo  :ptdgrid -> (
-split<grid><gridpair> (paint_sprite (pair<ptdgrid> aftertwo   (displace cc east     ))               (reflect_grid quadrant east )       (corner quadrant southwest)) \afterthree:ptdgrid -> (
+split<grid><gridpair> (paint_sprite (pair<ptdgrid> afterone   (displace cc south    ))               (reflect_grid quadrant east)       (corner quadrant northeast)) \aftertwo  :ptdgrid -> (
+split<grid><gridpair> (paint_sprite (pair<ptdgrid> aftertwo   (displace cc east     ))               (reflect_grid quadrant south)       (corner quadrant southwest)) \afterthree:ptdgrid -> (
 split<grid><gridpair> (paint_sprite (pair<ptdgrid> afterthree (displace cc southeast)) (reflect_grid (reflect_grid quadrant south) east) (corner quadrant northwest)) \afterfour :ptdgrid -> (
 
 split<int><gridpair> (svrl noise) \nb_rots:int -> (

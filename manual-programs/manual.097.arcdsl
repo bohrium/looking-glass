@@ -1,0 +1,19 @@
+(
+    split<int><gridpair> (many noise) \side:int -> (
+    repeat<gridpair> (svrl noise) (pair<gridpair> (new_grid side side) (new_grid side side)) \gp:gridpair -> (
+        split<shape><gridpair> (
+            silouhette (
+            sprinkle noise zero
+            (monochrome (rectangle (affine one (svrl noise) one) (affine one (svrl noise) one) zero) gray)
+            \nn:noise -> black
+            )
+        ) \s:shape -> (
+        split<ptdgrid><gridpair> (reserve_shape noise (fst<gridpair> gp) s (center s)) \pg:ptdgrid -> (
+        pair<gridpair>
+            (paint_sprite pg (monochrome s blue) (center s)) 
+            (paint_sprite (pair<ptdgrid> (snd<gridpair> gp) (snd<ptdgrid> pg)) (monochrome s (
+                cond<color> (len<{cell}> (holes_of s)) green blue
+            )) (center s))
+            
+    ))))
+)
