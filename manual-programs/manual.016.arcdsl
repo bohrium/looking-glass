@@ -6,7 +6,7 @@ split<{shape}><gridpair> (
     repeat<{shape}> nb_shapes nil<shape> \shapes:{shape} -> (
         add<shape> shapes (gen_shape noise (afew noise))
     )
-) \shapes:int -> (
+) \shapes:{shape} -> (
 pair<gridpair>
     (
         fold<shape><grid> shapes (new_grid height width) \s:shape -> \x:grid -> ( 

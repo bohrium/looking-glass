@@ -5,7 +5,7 @@ assert<gridpair> (negate (eq<color> ca cb)) (
 
 split<int><gridpair> (svrl noise) \shapeside:int-> (
 split<shape><gridpair> (gen_shape noise shapeside) \sh:shape -> (
-split<shape><gridpair> (affine one shapeside (afew noise)) \quadside:int -> (
+split<int><gridpair> (affine one shapeside (afew noise)) \quadside:int -> (
 split<grid><gridpair> (
     paint_sprite (reserve_shape noise (new_grid quadside quadside) sh (center sh)) (monochrome sh ca) (center sh)
 ) \quad:grid -> (

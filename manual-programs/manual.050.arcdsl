@@ -7,8 +7,8 @@ split<grid><gridpair>  (
     )
 ) \sp:grid -> ( 
 
-split<shape><gridpair> (new_grid (many noise) (many noise)) \blanky:grid -> (
-split<shape><gridpair> (paint_sprite (reserve_shape noise blanky sh (center sh)) sp (center sh)) \blankx:grid -> (
+split<grid><gridpair> (new_grid (many noise) (many noise)) \blanky:grid -> (
+split<grid><gridpair> (paint_sprite (reserve_shape noise blanky sh (center sh)) sp (center sh)) \blankx:grid -> (
 
 repeat<gridpair> (svrl noise) (pair<gridpair> blankx blanky) \gp:gridpair -> (
     split<ptdgrid><gridpair> (reserve_shape noise (fst<gridpair> gp) sh (center sh)) \pg:ptdgrid -> (

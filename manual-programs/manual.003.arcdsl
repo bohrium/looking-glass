@@ -11,7 +11,7 @@ repeat<gridpair> nb_objs (pair<gridpair> blank blank) \xy:gridpair -> (
     pair<gridpair> (
         split<grid><grid> (
         paint_sprite
-            (pair<ptdgrid> (fst<gridpair> xy) (snd<gridpair> pg))
+            (pair<ptdgrid> (fst<gridpair> xy) (snd<ptdgrid> pg))
             (monochrome small_plus color_a) (center small_plus)
         ) \half_painted:grid -> (
         paint_cell half_painted (snd<ptdgrid> pg) color_b

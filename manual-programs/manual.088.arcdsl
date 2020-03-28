@@ -1,0 +1,20 @@
+(
+    split<grid><gridpair> (new_grid (many noise) (many noise)) \blank:grid -> (
+    repeat<gridpair> (svrl noise) (pair<gridpair> blank blank) \gp:gridpair -> ( 
+        split<grid><gridpair> (
+            fill (new_grid (affine one (afew noise) one) (affine one (afew noise) one)) (rainbow noise) (pair<cell> zero zero) 
+        ) \rect:grid -> ( 
+        split<grid><gridpair> (
+            paint_sprite (pair<ptdgrid> rect (displace (corner rect northwest) southeast)) (
+                fill (new_grid (affine one (height<grid> rect) (negative two)) (affine one (width<grid> rect) (negative two))) cyan (pair<cell> zero zero) 
+            ) (pair<cell> zero zero)
+        ) \concentricrect:grid -> ( 
+        split<ptdgrid><gridpair> (
+            reserve_shape noise (fst<gridpair> gp) (silouhette rect) (corner rect northwest)
+        ) \px:grid -> (
+            pair<gridpair>
+            (paint_sprite px rect (corner rect northwest))
+            (paint_sprite (pair<ptdgrid> (snd<gridpair> gp) (snd<ptdgrid> px)) concentricrect (corner concentricrect northwest))
+    ))))
+)
+)
