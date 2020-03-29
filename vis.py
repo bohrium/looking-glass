@@ -43,7 +43,7 @@ def str_from_grids(grids, render=render_number):
     return '\n'.join(lines)
 
 if __name__=='__main__':
-    HARDNESS = 0
+    HARDNESS = 1
     print(CC+'hi!  here are some @R actual ARC @D tasks!')
     print(CC+'only showing hardness @P {} @D tasks...'.format(HARDNESS))
     for i in range(100):
