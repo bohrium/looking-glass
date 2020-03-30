@@ -1,28 +1,23 @@
 (
-split<int><gridpair> (svrl noise) \side:int -> (
-split<grid><gridpair> (new_grid side side) \blank:grid -> (
-fold<int><gridpair> (rows blank) (pair<gridpair> blank blank)
-    \row:int -> \xy:gridpair -> ( 
-    cond<gridpair> (coin noise) (
-        pair<gridpair> (
-            paint_row (fst<gridpair> xy) row (rainbow noise)
-        )(
-            paint_row (snd<gridpair> xy) row gray
-        )
-    )(
-        pair<gridpair> (
-            split<{nmbrdcolor}><grid> (
-            map<int><nmbrdcolor> (columns blank) \c:int -> (
-                pair<nmbrdcolor> c (rainbow noise)
-            )) \intcolors:{nmbrdcolor} -> (
-                fold<nmbrdcolor><grid> intcolors (fst<gridpair> xy)
-                \intcolor:nmbrdcolor -> \x:grid -> ( 
-                    paint_cell x (pair<cell> row (fst<nmbrdcolor> intcolor))
-                        (snd<nmbrdcolor> intcolor)
+split<ptdgrid><ptdgridpair> (
+    split<int><ptdgridpair> (svrl noise) \side:int -> (new_grid side side)
+) \blank:ptdgrid -> (
+fold<int><ptdgridpair> (rows blank) (pair<ptdgridpair> blank blank)
+    \row:int -> \xy:ptdgridpair -> ( 
+    cond<ptdgridpair> (coin noise) (
+        pair<ptdgridpair> (paint_row (fst<ptdgridpair> xy) row (rainbow noise))
+                          (paint_row (snd<ptdgridpair> xy) row gray)
+    ) (
+        pair<ptdgridpair> (
+            paint_sprite (
+                setsnd<ptdgrid> (fst<ptdgridpair> xy) (
+                    setfst<cell> (snd<ptdgrid> (fst<ptdgridpair> xy)) row
                 )
+            ) (
+                sprinkle noise four (
+                    new_grid one ( width<grid> ( fst<ptdgridpair> xy ) )
+                ) \nn:noise -> (rainbow noise)
             )
-        )(
-            snd<gridpair> xy
-        )
+        ) (snd<ptdgridpair> xy)
     ))
-)))
+))

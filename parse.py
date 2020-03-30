@@ -43,6 +43,7 @@ def get_height(tree):
     if type(tree) == str:
         return 0
     elif type(tree) == list:
+        print(tree)
         return 1+max(get_height(elt) for elt in tree[1:])
     elif type(tree) == dict: 
         for (nm, t), body in tree.items():
@@ -57,36 +58,37 @@ def str_from_tree_flat(tree):
         for (nm, t), body in tree.items():
             return '\\{}:{} -> {}'.format(nm, t, str_from_tree_flat(body)) 
 
-def str_from_tree(tree, depth=0, delim='   '):
-    tab = delim*depth
-
-    as_flat = '{}{}'.format(tab, str_from_tree_flat(tree))
-    if len(as_flat) < 40:
-        return as_flat
-
+def str_from_tree(tree, parent='', depth=0):
     if type(tree) == str:
-        return '{}{}'.format(tab, tree)
+        return tree
     elif type(tree) == list:
-        if type(tree[0])==str:
-            for prefix, (length, dd) in {'split':(3,0), 'repeat':(4,1), 'fold':(4,1)}.items(): 
-                if not(len(tree)==length and tree[0].startswith(prefix)): continue
-                lines = list(str_from_tree(elt, depth+dd) for elt in tree)
-                rtrn = '{}({}'.format(tab, ' '.join(piece.strip() for piece in lines[:-1]))
-                rtrn += (' {}\n{})'.format(
-                    lines[-1].split('\n')[0].strip(),
-                    '\n'.join(lines[-1].split('\n')[1:])
-                )) if '\n' in lines[-1] else '{}\n'.format(lines[-1].strip()) 
-                return rtrn
-        lines = list(str_from_tree(elt, depth+1) for elt in tree)
-        rtrn = '{}({}'.format(tab, lines[0].lstrip())
-        rtrn += ('\n'+'\n'.join(lines[1:])) if lines[1:] else ''
-        rtrn += ')'
-        return rtrn
-    elif type(tree) == dict: 
-        for (nm, t), body in tree.items():
-            rtrn = '{} \\{}:{} -> \n'.format(tab, nm, t) 
-            rtrn += str_from_tree(body, depth+0)
-            return rtrn
+        new_depth = depth + (0 if parent[:4] in tree[0][:4] else 1)
+
+        as_flats = [str_from_tree_flat(k) for k in tree]
+        best_indices = sorted((len(f)+1, i) for i,f in enumerate(as_flats)) 
+        indices_to_expand = []
+        len_sum = 0
+        for l,i in best_indices:
+            len_sum += l
+            if not (len_sum + 2*new_depth < 80): break
+            indices_to_expand.append(i)
+
+        return (
+            '(\n' + '  '*new_depth +
+            ' '.join(
+                as_flats[i] if i in indices_to_expand else
+                str_from_tree(k, parent=tree[0], depth=new_depth)
+                for i, k in enumerate(tree)
+            ) +
+            '\n' + '  '*depth + ')'
+        )
+    elif type(tree) == dict:
+        for (nm, tp), body in tree.items():
+            return (
+                '\\{}:{} -> '.format(nm, tp) +
+                str_from_tree(body, parent=parent, depth=depth).strip()
+            )
+
 
 class Parser:
     '''

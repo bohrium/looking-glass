@@ -1,24 +1,16 @@
 (
-split<int><gridpair> (many noise) \height:int -> (
-split<int><gridpair> (many noise) \width:int -> (
-split<grid><gridpair> (new_grid height width) \blank:grid -> (
-split<grid><gridpair> (new_grid one two) \domino:grid -> (
-split<grid><gridpair> (fill domino gray (corner domino west)) \slab:grid -> (
-repeat<gridpair> (svrl noise) (pair<gridpair> blank blank) \gp:gridpair -> (
-    split<color><gridpair> (rainbow noise) \c:color -> (
-    split<cell><gridpair> (sample_cell noise blank) \start:cell -> (
-    split<grid><gridpair> (paint_cell slab (corner slab west) c) \tile:grid -> (
-    pair<gridpair>
-        (paint_cell (fst<gridpair> gp) start c)
-        (fst<ptdgrid>(
-        repeat<ptdgrid> width (pair<ptdgrid> (snd<gridpair> gp) start) \pg:ptdgrid -> (
-            pair<ptdgrid>
-            (
-                paint_sprite pg tile (corner tile west)
-            )
-            (
-                displace (displace (snd<ptdgrid> pg) east) east
-            )
-        )))
+split<ptdgrid><ptdgridpair> (new_grid (many noise) (many noise)) \blank:ptdgrid -> (
+repeat<ptdgridpair> (svrl noise) (pair<gridpair> blank blank) \gp:gridpair -> (
+    split<color><ptdgridpair> (rainbow noise) \c:color -> (
+    split<cell><ptdgridpair> (snd<ptdgrid> (sample_cell noise blank)) \start:cell -> (
+    pair<ptdgridpair> (
+        paint_cell (setsnd<ptdgrid> (fst<ptdgridpair> gp) start) c
+    ) (
+        repeat<ptdgrid> (width<grid> blank) (setsnd<ptdgrid> (snd<ptdgridpair> gp) start) \pg:ptdgrid -> (
+            setsnd<ptdgrid>
+                (paint_sprite pg (paint_cell (fill (new_grid one two) gray) c))
+                (displace (displace (snd<ptdgrid> pg) east) east)
+        )
+    )
 )))
-)))))))
+))

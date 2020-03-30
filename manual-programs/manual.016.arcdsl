@@ -1,27 +1,23 @@
 (
-split<int><gridpair> (many noise) \height:int -> (
-split<int><gridpair> (many noise) \width:int -> (
 split<int><gridpair> (svrl noise) \nb_shapes:int -> (
 split<{shape}><gridpair> (
     repeat<{shape}> nb_shapes nil<shape> \shapes:{shape} -> (
         add<shape> shapes (gen_shape noise (afew noise))
     )
 ) \shapes:{shape} -> (
-pair<gridpair>
-    (
-        fold<shape><grid> shapes (new_grid height width) \s:shape -> \x:grid -> ( 
-            paint_sprite
-                (reserve_shape noise x s (center s))
-                (monochrome s cyan) (center s)
+    pair<gridpair> (
+        fold<shape><grid> shapes (
+            new_grid (many noise) (many noise)
+        ) \s:shape -> \x:grid -> ( 
+            paint_sprite (reserve_shape noise x s) (monochrome s cyan)
         )
     )(
-        split<grid><grid> (new_grid nb_shapes nb_shapes) \yblank:grid -> (
-        split<cell><grid> (corner yblank northwest) \crnr:cell -> (
-        fst<ptdgrid> (
-        repeat<ptdgrid> nb_shapes (pair<ptdgrid> yblank crnr) \g:ptdgrid -> (
-            pair<ptdgrid>
-            (paint_cell (fst<ptdgrid> g) (snd<ptdgrid> g) cyan)
-            (displace (snd<ptdgrid> g) southeast)
-        ))))
+        repeat<ptdgrid> nb_shapes (
+            corner<grid> (new_grid nb_shapes nb_shapes) northwest
+        ) \g:ptdgrid -> (
+            setsnd<ptdgrid>
+                (paint_cell g cyan)
+                (displace (snd<ptdgrid> g) southeast)
+        )
     )
-)))))
+)))

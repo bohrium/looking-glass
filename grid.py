@@ -17,7 +17,7 @@ from block import GENERIC_COLORS, Block
 
 class Grid:
     def __init__(self, H, W):
-        internal_assert(H<=15 and W<=15, 'requested grid is too big')
+        internal_assert(H<=18 and W<=18, 'requested grid is too big')
 
         self.colors = np.array([['K' for _ in range(W)] for _ in range(H)])
         self.occupd = np.array([[0   for _ in range(W)] for _ in range(H)])
@@ -125,11 +125,14 @@ class Grid:
             seen.update(frontier)
         return self
 
-    def noise(self, colors, density=0.05):
-        for r in range(self.H):
-            for c in range(self.W):
-                if not bernoulli(density): continue
-                self.colors[r,c] = uniform(colors) 
+    def sprinkle(self, colorgen, density):
+        pts = np.random.choice(
+            a       = [r*self.W + c for r in range(self.H) for c in range(self.W)],
+            size    = int((self.H*self.W) * density),
+            replace = False,
+        )
+        for rc in pts:
+            self.colors[rc//self.W, rc%self.W] = colorgen(None) 
         return self
 
     def paint_cell(self, cell, color):

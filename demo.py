@@ -13,14 +13,14 @@ from utils import CC, pre                               # ansi
 from utils import secs_endured, megs_alloced            # profiling
 from utils import paths                                 # paths    
 
-from parse import Parser, str_from_tree_flat, str_from_tree
+from parse import Parser, str_from_tree_flat, str_from_tree, get_height
 from grid import Grid
 from resources import PrimitivesWrapper
 from vis import str_from_grids, render_color
 
 def print_grids(grids):
     print(CC+str_from_grids([
-        z.colors for z in grids
+        z[0].colors for z in grids
     ], render_color))
 
 where = ''
@@ -72,7 +72,8 @@ def demonstrate(file_nm, print_text=True, nb_rows=1, nb_cols=1, nb_tries=10, sho
     t = P.get_tree()
 
     if print_text:
-        print(CC+'@P {} @D '.format(str_from_tree(t)))
+        print(CC+'height @O {}@D '.format(get_height(t)))
+        #print(CC+'@P {} @D '.format(str_from_tree(t)))
 
     print(CC+'sampling from @P {}@D ...'.format(file_nm))
     primitives = PrimitivesWrapper().primitives
@@ -89,11 +90,11 @@ def demonstrate(file_nm, print_text=True, nb_rows=1, nb_cols=1, nb_tries=10, sho
                     break
                 except InternalError:
                     continue
-                except Exception as e:
-                    print(CC+'@R error@D ')
-                    print(CC+where)
-                    print(e)
-                    break
+                #except Exception as e:
+                #    print(CC+'@R error@D ')
+                #    print(CC+where)
+                #    print(e)
+                #    break
 
             if show_exec:
                 for nm, val in samples.items():
@@ -118,6 +119,6 @@ if __name__=='__main__':
     file_nms = paths('manual')
     for fnm in file_nms:
         print(fnm)
-        demonstrate(fnm, print_text=False, show_exec=False, nb_rows=2, nb_cols=2)
+        demonstrate(fnm, print_text=True, show_exec=False, nb_rows=1, nb_cols=1)
         input(CC+'@O next?@D ')
 

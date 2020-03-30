@@ -1,29 +1,24 @@
 (
-split<int><gridpair> (many noise) \gridside:int -> (
-split<int><gridpair> (afew noise) \nb_objs:int -> (
-split<grid><gridpair> (new_grid gridside gridside) \blank:grid -> (
-split<color><gridpair> (rainbow noise) \color_a:color -> (
-split<color><gridpair> (rainbow noise) \color_b:color -> (
-repeat<gridpair> nb_objs (pair<gridpair> blank blank) \xy:gridpair -> (
-    split<ptdgrid><gridpair> (
-    reserve_shape noise (snd<gridpair> xy) large_square (center large_square)
-    ) \pg:ptdgrid -> (
-    pair<gridpair> (
-        split<grid><grid> (
-        paint_sprite
-            (pair<ptdgrid> (fst<gridpair> xy) (snd<ptdgrid> pg))
-            (monochrome small_plus color_a) (center small_plus)
-        ) \half_painted:grid -> (
-        paint_cell half_painted (snd<ptdgrid> pg) color_b
-        )
-    )(
-        split<grid><grid> (
-        paint_sprite pg (monochrome large_plus color_a) (center large_plus)
-        ) \half_painted:grid -> (
-        paint_sprite
-            (pair<ptdgrid> half_painted (snd<ptdgrid> pg))
-            (monochrome large_times color_b) (center large_times)
-        )
-    ))
-))))))
-)
+split<color><ptdgridpair> (rainbow noise) \color_a:color -> (
+split<color><ptdgridpair> (rainbow noise) \color_b:color -> (
+    repeat<ptdgridpair> (afew noise) (
+        split<int><ptdgridpair> (many noise) \side:int ->
+            (pair<ptdgridpair> (new_grid side side) (new_grid side side))
+    ) \xy:ptdgridpair -> (
+      split<ptdgrid><ptdgridpair> (
+          reserve_shape noise (snd<ptdgridpair> xy) (make_square (affine two two one))
+      ) \pg:ptdgrid -> (
+      pair<ptdgridpair> (
+          paint_sprite (
+          paint_sprite (
+              setsnd<ptdgrid> (fst<ptdgridpair> xy) (snd<ptdgrid> pg)
+          ) (monochrome (make_plus  (affine two  one one)) color_a)
+          ) (monochrome (make_times (affine two zero one)) color_b)
+      ) (
+          paint_sprite (
+          paint_sprite  
+              pg
+            (monochrome (make_plus  (affine two  two one)) color_a)
+          ) (monochrome (make_times (affine two  two one)) color_b)
+      ))
+))))

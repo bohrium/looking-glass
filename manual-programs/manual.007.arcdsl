@@ -1,24 +1,19 @@
 (
-split<int><gridpair> (many noise) \side:int -> (
-split<int><gridpair> (afew noise) \nb_big_objs:int -> (
-split<grid><gridpair> (new_grid side side) \blank:grid -> (
-split<shape><gridpair> (gen_shape noise four) \shape_big:shape -> (
-split<shape><gridpair> (gen_shape noise four) \shape_small:shape -> (
-split<grid><gridpair> 
-    (
-        paint_sprite
-            (reserve_shape noise blank shape_small (center shape_small))
-            (monochrome shape_small red) (center shape_small)
-    )
-    \reddened:grid -> (
-        split<grid><gridpair> (
-            repeat<grid> nb_big_objs reddened \z:grid -> (
-                paint_sprite
-                    (reserve_shape noise z shape_big (center shape_big))
-                    (monochrome shape_big blue)
-                    (center shape_big)
-            )
+split<ptdgrid><ptdgridpair> (
+    split<int><ptdgridpair> (many noise) \side:int -> (new_grid side side)
+) \blank:ptdgrid -> (
+split<ptdshape><ptdgridpair> (gen_shape noise four) \ptdshape_large:ptdshape -> (
+split<ptdshape><ptdgridpair> (gen_shape noise four) \ptdshape_small:ptdshape -> (
+    split<ptdgrid><ptdgridpair> (
+        repeat<ptdgrid> (afew noise) (
+            paint_sprite (
+                reserve_shape noise blank ptdshape_small
+            ) (monochrome ptdshape_small red)
+        ) \z:ptdgrid -> (
+            paint_sprite (
+                reserve_shape noise z ptdshape_large
+            ) (monochrome ptdshape_large blue)
         )
-        \y:grid -> (pair<gridpair> (monochrome (silouhette y) cyan) y)
     )
-))))))
+    \y:ptdgrid -> (pair<ptdgridpair> (monochrome (silouhette y) cyan) y)
+))))
